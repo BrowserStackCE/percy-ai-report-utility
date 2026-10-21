@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Primary (indigo-blue used for checks, radios, focus, selected states) */
+  --color-brand-50: #eef1fd;
+  --color-brand-100: #dfe5fb;
+  --color-brand-300: #8f9fee;
+  --color-brand-500: #3b53d9;
+  --color-brand-600: #2f43c0;
+  --color-brand-700: #2636a0;
+
+  /* Text and structure */
+  --color-ink-900: #14181f;
+  --color-ink-700: #333a46;
+  --color-ink-500: #5f6877;
+  --color-ink-400: #868e9c;
+  --color-ink-300: #b3b9c4;
+  --color-line: #e6e8ec;
+  --color-line-strong: #d5d9e0;
+  --color-page: #f6f5f4;
+  --color-surface: #f2f3f5;
+  --color-chip: #eef0f3;
+
+  /* Shell */
+  --color-shell: #111827;
+
+  /* Status */
+  --color-mint-50: #e8f7ef;
+  --color-mint-300: #8fd9b0;
+  --color-mint-700: #14733f;
+  --color-danger-50: #fdeeec;
+  --color-danger-600: #c43328;
+  --color-warn-50: #fff4df;
+  --color-warn-700: #94600a;
+
+  --shadow-popover: 0 8px 24px -4px rgb(17 24 39 / 0.14), 0 2px 6px rgb(17 24 39 / 0.06);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* One motion speed for the whole UI (0.5s). Tailwind's transition utilities read these defaults. */
+  --default-transition-duration: 500ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-ui: 500ms;
+}
+
+html {
+  /* Reserve scrollbar space so route changes never shift layout. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Route transition: opacity only, no layout movement. */
+@keyframes page-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-enter {
+  animation: page-in var(--duration-ui) var(--ease-out-soft) both;
+}
+
+/* Popover entrance: opacity plus a tiny settle, anchored so nothing reflows. */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pop-in {
+  animation: pop-in var(--duration-ui) var(--ease-out-soft) both;
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #eceef2 25%, #f6f7f9 50%, #eceef2 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .pop-in, .skeleton { animation: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
