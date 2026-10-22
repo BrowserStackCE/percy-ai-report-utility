@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
-import { AuthError, validateBrowserStack, validatePercyToken } from "../auth/percyAuth";
+import { isApiError } from "../api/errors";
+import { validateBrowserStack, validatePercyToken } from "../auth/percyAuth";
 import { Button, Card, TextField } from "../components/ui";
 
 type Result = { ok: boolean; text: string; hint?: string };
 
 function toResult(err: unknown): Result {
-  if (err instanceof AuthError) return { ok: false, text: err.message, hint: err.hint };
+  if (isApiError(err)) return { ok: false, text: err.message, hint: err.hint };
   return { ok: false, text: "Something went wrong while validating." };
 }
 
