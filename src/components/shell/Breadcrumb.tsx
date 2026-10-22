@@ -37,6 +37,8 @@ function useCrumbs(): Crumb[] {
     return [home, { label: buildLabel }];
   }
 
+  if (pathname === "/projects") return [home, { label: "Projects" }];
+  if (pathname === "/login") return [home, { label: "Sign in" }];
   if (pathname === "/settings") return [home, { label: "Settings" }];
   if (pathname === "/ai-features") return [home, { label: "AI features" }];
   if (pathname === "/") return [{ label: "Reports" }];

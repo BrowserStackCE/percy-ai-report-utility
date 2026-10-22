@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
-import { AuthError, validateBrowserStack, validatePercyToken } from "../auth/percyAuth";
+import { isApiError } from "../api/errors";
+import { validateBrowserStack, validatePercyToken } from "../auth/percyAuth";
 import { Button, Card, TextField } from "../components/ui";
 
 type Result = { ok: boolean; text: string; hint?: string };
 
 function toResult(err: unknown): Result {
-  if (err instanceof AuthError) return { ok: false, text: err.message, hint: err.hint };
+  if (isApiError(err)) return { ok: false, text: err.message, hint: err.hint };
   return { ok: false, text: "Something went wrong while validating." };
 }
 
@@ -62,6 +63,9 @@ export default function Login() {
         <code>percy-report login</code> in your terminal.
       </p>
 
+      {params.get("signedOut") === "1" && (
+        <p role="status" className="mt-4 text-sm text-green-700">You have been signed out.</p>
+      )}
       {params.get("error") === "callback" && (
         <p role="alert" className="mt-4 text-sm text-red-600">The link from the terminal was invalid. Run the CLI again or sign in below.</p>
       )}

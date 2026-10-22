@@ -24,7 +24,7 @@ Requires Node 18+.
 ```sh
 percy-report-utility login [options]   # validate, store, and open the report site
 percy-report-utility status            # re-validate the stored credentials
-percy-report-utility logout            # remove the stored credentials
+percy-report-utility logout [options]  # remove stored credentials and sign out of the website
 percy-report-utility --help
 ```
 
@@ -36,6 +36,12 @@ percy-report-utility --help
 --access-key <accessKey>     BrowserStack access key (default: BROWSERSTACK_ACCESS_KEY)
 --no-open                    Print the link without opening the browser
 ```
+
+`logout` also accepts `--no-open` (remove local credentials and print the website sign-out link instead of opening it).
+
+### CI/CD and headless use
+
+The browser is opened only on an interactive terminal. When `CI` is set, there is no TTY, or `--no-open` is passed, `login` only validates and saves the credentials (use the `PERCY_TOKEN`, `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` env vars) and prints the link, and `logout` only removes the stored credentials and prints the sign-out link. Nothing ever blocks waiting for a browser or a prompt.
 
 Run `login` with no options for hidden interactive prompts. Leave a section blank to skip it.
 
