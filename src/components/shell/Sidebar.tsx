@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
 import { Layers, Settings, Spark } from "../ui/Icons";
+import { useProjects } from "../../api/projects/useProjects";
+import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
 import { Select } from "../ui/Select";
 import { NewTag } from "../ui/Badge";
 import { Eyebrow } from "../ui/Card";
@@ -40,16 +42,12 @@ function SidebarNavItem({ to, icon, label, end, tag }: NavItemProps) {
   );
 }
 
-const projects = [
-  { value: "web-storefront", label: "web-storefront" },
-  { value: "mobile-web", label: "mobile-web" },
-  { value: "percy-demo", label: "percy-demo" },
-];
-
 /** Navigation panel. Holds the hamburger and brand at the top; open and closed state comes from the sidebar context. */
 export default function Sidebar() {
   const { collapsed } = useSidebar();
-  const [project, setProject] = useState("web-storefront");
+  const { projects: loaded } = useProjects();
+  const { projectId: project, setProjectId: setProject } = useSelectedProject();
+  const projects = loaded.map((p) => ({ value: p.id, label: p.name }));
 
   return (
     <aside
@@ -80,6 +78,7 @@ export default function Sidebar() {
             options={projects}
             onChange={setProject}
             ariaLabel="Project"
+            placeholder="Select project"
             searchable
             searchPlaceholder="Search projects"
           />
@@ -88,6 +87,7 @@ export default function Sidebar() {
 
       <nav aria-label="Primary" className={cn("flex-1 p-3", !collapsed && "border-t border-line p-4")}>
         <div className="space-y-0.5">
+          <SidebarNavItem to="/projects" icon={<Layers size={18} />} label="Projects" />
           <SidebarNavItem to="/" end icon={<Layers size={18} />} label="Reports" />
           <SidebarNavItem to="/settings" icon={<Settings size={18} />} label="Settings" />
           <SidebarNavItem to="/ai-features" icon={<Spark size={18} />} label="AI features" tag={<NewTag />} />

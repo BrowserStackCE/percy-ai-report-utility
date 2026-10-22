@@ -16,6 +16,8 @@ interface SelectProps<T extends string> {
   /** Show a search box inside the menu (project switcher style). */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** Text shown in the trigger when no option is selected. */
+  placeholder?: string;
   /** "field" is the bordered full-width selector; "compact" is the inline "All" style. */
   variant?: "field" | "compact";
   className?: string;
@@ -29,6 +31,7 @@ export function Select<T extends string>({
   ariaLabel,
   searchable = false,
   searchPlaceholder = "Search",
+  placeholder,
   variant = "field",
   className,
 }: SelectProps<T>) {
@@ -53,7 +56,7 @@ export function Select<T extends string>({
             className,
           )}
         >
-          <span className="truncate">{current?.label ?? ""}</span>
+          <span className={cn("truncate", !current && "text-ink-400")}>{current?.label ?? placeholder ?? ""}</span>
           {variant === "field" ? <ChevronsUpDown size={16} className="text-ink-500" /> : <ChevronDown size={16} className="text-ink-500" />}
         </button>
       )}
