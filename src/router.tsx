@@ -10,6 +10,7 @@ import ComingSoon from "./pages/ComingSoon";
 import Login from "./pages/Login";
 import Projects from "./pages/Projects";
 import AuthCallback from "./pages/AuthCallback";
+import LogoutCallback from "./pages/LogoutCallback";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "/projects", element: <Projects /> },
       { path: "/login", element: <Login /> },
       { path: "/auth/callback", element: <AuthCallback /> },
+      { path: "/auth/logout", element: <LogoutCallback /> },
       { path: "/settings", element: <ComingSoon title="Settings" /> },
       { path: "/ai-features", element: <ComingSoon title="AI features" /> },
 

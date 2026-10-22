@@ -61,3 +61,11 @@ test("logout removes stored credentials", () => {
   assert.equal(res.status, 0);
   assert.equal(fs.existsSync(path.join(dir, "credentials.json")), false);
 });
+
+test("logout in CI prints the website sign-out link instead of opening a browser", () => {
+  const reportUrl = process.env.PERCY_REPORT_URL ?? "http://localhost:5173";
+  const r = run(["logout"], { CI: "true", PERCY_REPORT_URL: reportUrl });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /To also sign out of the website, open/);
+  assert.ok(r.stdout.includes(`${reportUrl}/auth/logout`), `expected ${reportUrl}/auth/logout in:\n${r.stdout}`);
+});

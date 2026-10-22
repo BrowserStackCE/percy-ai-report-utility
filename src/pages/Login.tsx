@@ -63,6 +63,9 @@ export default function Login() {
         <code>percy-report login</code> in your terminal.
       </p>
 
+      {params.get("signedOut") === "1" && (
+        <p role="status" className="mt-4 text-sm text-green-700">You have been signed out.</p>
+      )}
       {params.get("error") === "callback" && (
         <p role="alert" className="mt-4 text-sm text-red-600">The link from the terminal was invalid. Run the CLI again or sign in below.</p>
       )}

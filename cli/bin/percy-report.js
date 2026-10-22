@@ -34,6 +34,13 @@ function buildLink(creds) {
   return `${WEB_URL}/auth/callback#d=${payload}`;
 }
 
+/** Open the browser only on an interactive machine: never in CI or without a TTY. */
+function canOpenBrowser(opts) {
+  if (opts.open === false) return false;
+  if (process.env.CI && process.env.CI !== "false") return false;
+  return Boolean(process.stdout.isTTY);
+}
+
 function openBrowser(url) {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
@@ -104,7 +111,7 @@ async function login(opts) {
 
   const link = buildLink(merged);
   console.log(`\nOpen the report site (already authenticated):\n  ${link}\n`);
-  if (opts.open !== false) openBrowser(link);
+  if (canOpenBrowser(opts)) openBrowser(link);
   if (failed) process.exitCode = 2;
 }
 
@@ -150,9 +157,17 @@ program.command("status").description("Re-validate the stored credentials").acti
 program
   .command("logout")
   .description("Remove the stored credentials")
-  .action(() => {
+  .option("--no-open", "Do not open the browser to sign out of the website")
+  .action((opts) => {
     clearCredentials();
-    console.log("Logged out. Stored credentials removed (use Sign out on the website to clear its cookie).");
+    console.log("Logged out. Stored credentials removed.");
+    const link = `${WEB_URL}/auth/logout`;
+    if (canOpenBrowser(opts)) {
+      console.log(`Signing out of the report site:\n  ${link}`);
+      openBrowser(link);
+    } else {
+      console.log(`To also sign out of the website, open:\n  ${link}`);
+    }
   });
 
 await program.parseAsync(process.argv);
