@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { reports } from "../data/mock";
-import type { Report } from "../types";
+import { useBuilds } from "../api/builds/useBuilds";
+import type { Build, BuildState } from "../api/builds/types";
+import { isRetryable } from "../api/errors";
+import { useProjects } from "../api/projects/useProjects";
+import { useSelectedProject } from "../api/projects/SelectedProjectProvider";
 import {
   Button,
   Card,
@@ -14,64 +17,105 @@ import {
   StatusPill,
   TextField,
   Truncate,
+  buttonClass,
   type Column,
 } from "../components/ui";
 
-type StatusFilter = "all" | "ready" | "processing";
+type StateFilter = "all" | BuildState;
 
-const statusOptions = [
+const stateOptions = [
   { value: "all" as const, label: "All" },
-  { value: "ready" as const, label: "Ready" },
+  { value: "finished" as const, label: "Finished" },
   { value: "processing" as const, label: "Processing" },
+  { value: "waiting" as const, label: "Waiting" },
+  { value: "failed" as const, label: "Failed" },
 ];
 
-const columns: Column<Report>[] = [
+const stateTone: Record<BuildState, "mint" | "warn" | "danger" | "neutral"> = {
+  finished: "mint",
+  processing: "warn",
+  waiting: "warn",
+  failed: "danger",
+  unknown: "neutral",
+};
+
+function stateLabel(s: BuildState) {
+  return s === "unknown" ? "Unknown" : s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const columns: Column<Build>[] = [
   {
     key: "build",
     header: "Build",
-    render: (r) => (
+    render: (b) => (
       <div className="max-w-xl">
         <div className="flex items-center gap-3">
-          <Link to={`/reports/${r.buildId}`} className="shrink-0 text-lg font-semibold text-ink-900 hover:text-brand-600">
-            {r.buildId}
+          <Link to={`/reports/${b.id}`} className="shrink-0 text-lg font-semibold text-ink-900 hover:text-brand-600">
+            {b.buildNumber !== null ? `#${b.buildNumber}` : b.id}
           </Link>
-          <span className="min-w-0 max-w-56 shrink">
-            <Chip>
-              <Truncate>{r.branch}</Truncate>
-            </Chip>
-          </span>
-          {r.commit && <Chip mono>{r.commit}</Chip>}
-          <span className="shrink-0 whitespace-nowrap text-sm text-ink-500">
-            {new Date(r.generatedAt).toLocaleString()}
-          </span>
+          {b.branch && (
+            <span className="min-w-0 max-w-56 shrink">
+              <Chip>
+                <Truncate>{b.branch}</Truncate>
+              </Chip>
+            </span>
+          )}
+          {b.createdAt && (
+            <span className="shrink-0 whitespace-nowrap text-sm text-ink-500">{new Date(b.createdAt).toLocaleString()}</span>
+          )}
         </div>
-        <Truncate className="mt-1 text-sm text-ink-500">{r.project}</Truncate>
+        <Truncate className="mt-1 text-sm text-ink-500">
+          {b.isPullRequest && b.pullRequestTitle ? `PR #${b.pullRequestNumber ?? ""} ${b.pullRequestTitle}` : `Build ID ${b.id}`}
+        </Truncate>
       </div>
     ),
   },
   {
-    key: "status",
-    header: "Report",
+    key: "snapshots",
+    header: "Snapshots",
     align: "right",
-    render: (r) => (
-      <StatusPill tone={r.status === "ready" ? "mint" : "warn"}>
-        {r.status === "ready" ? "Ready" : "Processing"}
-      </StatusPill>
+    render: (b) => (
+      <span className="text-sm tabular-nums text-ink-700">
+        {b.totalSnapshots ?? "—"}
+        {b.snapshotsWithDiffs ? ` · ${b.snapshotsWithDiffs} with diffs` : ""}
+      </span>
+    ),
+  },
+  {
+    key: "state",
+    header: "Build",
+    align: "right",
+    render: (b) => (
+      <div className="flex flex-col items-end gap-1">
+        <StatusPill tone={stateTone[b.state]}>{stateLabel(b.state)}</StatusPill>
+        {b.state === "failed" && b.failureReason && <span className="text-xs text-ink-500">{b.failureReason.replace(/_/g, " ")}</span>}
+      </div>
     ),
   },
 ];
 
 export default function Home() {
+  const { projectId } = useSelectedProject();
+  const { projects } = useProjects();
+  const { status, builds, error, hasMore, loadingMore, loadMore, reload } = useBuilds(projectId);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [state, setState] = useState<StateFilter>("all");
   const [buildId, setBuildId] = useState("");
   const navigate = useNavigate();
 
-  const rows = reports.filter(
-    (r) =>
-      (status === "all" || r.status === status) &&
-      (r.buildId.includes(query.trim()) || r.branch.toLowerCase().includes(query.trim().toLowerCase())),
-  );
+  const project = projects.find((p) => p.id === projectId);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return builds.filter(
+      (b) =>
+        (state === "all" || b.state === state) &&
+        (q === "" ||
+          b.id.includes(q) ||
+          String(b.buildNumber ?? "").includes(q) ||
+          (b.branch ?? "").toLowerCase().includes(q)),
+    );
+  }, [builds, query, state]);
 
   function open() {
     const id = buildId.trim();
@@ -106,24 +150,57 @@ export default function Home() {
         </form>
       </Card>
 
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Search builds by build number or branch"
-        aria-label="Search builds"
-        trailing={
-          <div className="h-full w-32">
-            <Select value={status} options={statusOptions} onChange={setStatus} ariaLabel="Report status" variant="compact" />
+      {!projectId ? (
+        <Card className="p-5">
+          <p className="text-sm text-ink-700">Select a project in the sidebar to see its recent builds (last 30 days).</p>
+        </Card>
+      ) : error ? (
+        <Card className="p-5">
+          <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
+          {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
+          <div className="mt-3 flex gap-2">
+            {error.kind === "not_authenticated" || error.kind === "unauthorized" ? (
+              <Link to="/login" className={buttonClass("primary")}>Sign in</Link>
+            ) : (
+              isRetryable(error) && <Button onClick={reload}>Try again</Button>
+            )}
           </div>
-        }
-      />
+        </Card>
+      ) : (
+        <>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder={`Search ${project?.name ?? "project"} builds by build number or branch`}
+            aria-label="Search builds"
+            trailing={
+              <div className="h-full w-36">
+                <Select value={state} options={stateOptions} onChange={setState} ariaLabel="Build state" variant="compact" />
+              </div>
+            }
+          />
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(r) => r.buildId}
-        empty="No builds match your search."
-      />
+          {status === "loading" ? (
+            <p role="status" className="text-sm text-ink-500">Loading recent builds…</p>
+          ) : (
+            <>
+              <DataTable
+                columns={columns}
+                rows={rows}
+                rowKey={(b) => b.id}
+                empty={builds.length === 0 ? "No builds in the last 30 days for this project." : "No builds match your search."}
+              />
+              {hasMore && (
+                <div className="flex justify-center">
+                  <Button onClick={loadMore} disabled={loadingMore}>
+                    {loadingMore ? "Loading…" : "Load older builds"}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
     </PageContainer>
   );
 }
