@@ -1,0 +1,46 @@
+{
+  "name": "percy-report-utility",
+  "version": "0.1.0",
+  "description": "Authenticate with Percy / BrowserStack from the terminal and open the Percy AI Report site already signed in",
+  "type": "module",
+  "bin": {
+    "percy-report-utility": "bin/percy-report.js",
+    "percy-report": "bin/percy-report.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "percy",
+    "browserstack",
+    "visual-testing",
+    "report",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrowserStackCE/percy-ai-report-utility.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/BrowserStackCE/percy-ai-report-utility/issues"
+  },
+  "homepage": "https://github.com/BrowserStackCE/percy-ai-report-utility/tree/main/cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  }
+}

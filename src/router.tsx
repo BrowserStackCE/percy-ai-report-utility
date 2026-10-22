@@ -7,6 +7,8 @@ import FindingsTab from "./pages/report/FindingsTab";
 import ComparisonPage from "./pages/ComparisonPage";
 import NotFound from "./pages/NotFound";
 import ComingSoon from "./pages/ComingSoon";
+import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +24,8 @@ export const router = createBrowserRouter([
         ],
       },
       { path: "/reports/:buildId/findings/:findingId", element: <ComparisonPage /> },
+      { path: "/login", element: <Login /> },
+      { path: "/auth/callback", element: <AuthCallback /> },
       { path: "/settings", element: <ComingSoon title="Settings" /> },
       { path: "/ai-features", element: <ComingSoon title="AI features" /> },
 
