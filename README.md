@@ -3,10 +3,17 @@
 The Percy AI Review Report website will turn a completed Percy build’s existing AI analysis into one concise, actionable report—accessible through a direct link and available to download.
 
 The purpose will not be to make customers inspect every snapshot again. It will help them quickly answer:
-* What changed?
-* Which changes look like bugs?
-* Where did they happen?
-* What should I review?
+
+- What changed?
+- Which changes look like bugs?
+- Where did they happen?
+- What should I review?
+
+## CLI Utility
+
+```bash
+npmjs.com/package/percy-report-utility
+```
 
 ## Steps to Use the Utility
 
@@ -25,46 +32,52 @@ If generation takes time, the proposed experience will be to return a stable lin
 ## What the Website Will Show
 
 ### A. Build Summary
+
 At the top, it will show enough context for reviewers to understand what they are looking at:
-* Percy project and build identifier.
-* Baseline and target build/environment information, where available.
-* Report generation time.
-* A link to the original Percy build.
+
+- Percy project and build identifier.
+- Baseline and target build/environment information, where available.
+- Report generation time.
+- A link to the original Percy build.
 
 It will then show the core summary:
 
-| Summary | What It Will Tell the Reviewer |
-| :--- | :--- |
-| **Total reported differences** | How many visual differences will be included in this report |
-| **Likely bugs** | How many differences the existing AI analysis will classify as likely bugs |
-| **Not bugs** | How many differences it will classify as not bugs |
-| **Category breakdown** | How the differences will be distributed across the categories provided by the AI Review Agent |
+| Summary                        | What It Will Tell the Reviewer                                                                |
+| :----------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Total reported differences** | How many visual differences will be included in this report                                   |
+| **Likely bugs**                | How many differences the existing AI analysis will classify as likely bugs                    |
+| **Not bugs**                   | How many differences it will classify as not bugs                                             |
+| **Category breakdown**         | How the differences will be distributed across the categories provided by the AI Review Agent |
 
 We will avoid labeling every visual difference as a confirmed “defect.” A difference may be intentional, and a likely bug will be an AI classification—not a confirmed defect.
 
 ### B. Findings List
+
 The main section will be a concise, filterable list of findings.
 
 Each finding will contain:
 
-| Field | Expected Content |
-| :--- | :--- |
-| **Page / snapshot** | The page or snapshot where the difference occurred |
-| **Specific page URL** | The associated tested page URL, where available |
-| **Category** | The category supplied by the Percy AI Review Agent |
-| **Bug classification** | Likely bug / not a bug, as supplied by the agent |
-| **AI description** | A short explanation of the visual difference |
-| **Comparison link** | An action to open baseline and target together |
+| Field                  | Expected Content                                   |
+| :--------------------- | :------------------------------------------------- |
+| **Page / snapshot**    | The page or snapshot where the difference occurred |
+| **Specific page URL**  | The associated tested page URL, where available    |
+| **Category**           | The category supplied by the Percy AI Review Agent |
+| **Bug classification** | Likely bug / not a bug, as supplied by the agent   |
+| **AI description**     | A short explanation of the visual difference       |
+| **Comparison link**    | An action to open baseline and target together     |
 
 Useful filters will include:
-* Bug classification
-* Category
-* Page or snapshot
+
+- Bug classification
+- Category
+- Page or snapshot
 
 ### C. Comparison View
+
 Each finding will provide a clear “View comparison” action that will open:
-* Baseline capture — Prod
-* Target capture — Stage
+
+- Baseline capture — Prod
+- Target capture — Stage
 
 ...together on one screen.
 
@@ -79,8 +92,9 @@ Whether this comparison opens inside our website or links to an existing Percy c
 The product response will explicitly substitute bug classification because Percy does not currently assign severity.
 
 Therefore, the agreed report will show:
-* Likely bug
-* Not a bug
+
+- Likely bug
+- Not a bug
 
 It will not invent Critical / High / Medium / Low ratings or present bug classification as if it were severity.
 
