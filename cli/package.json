@@ -1,14 +1,46 @@
 {
-  "name": "percy-report-cli",
+  "name": "percy-report-utility",
   "version": "0.1.0",
-  "private": true,
+  "description": "Authenticate with Percy / BrowserStack from the terminal and open the Percy AI Report site already signed in",
   "type": "module",
-  "description": "Terminal authentication for the Percy AI Report utility",
-  "bin": { "percy-report": "./bin/percy-report.js" },
-  "engines": { "node": ">=18" },
+  "bin": {
+    "percy-report-utility": "./bin/percy-report.js",
+    "percy-report": "./bin/percy-report.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "login": "node bin/percy-report.js login",
-    "status": "node bin/percy-report.js status",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "percy",
+    "browserstack",
+    "visual-testing",
+    "report",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrowserStackCE/percy-ai-report-utility.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/BrowserStackCE/percy-ai-report-utility/issues"
+  },
+  "homepage": "https://github.com/BrowserStackCE/percy-ai-report-utility/tree/main/cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
   }
 }

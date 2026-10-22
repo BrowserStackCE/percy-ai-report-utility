@@ -19,11 +19,12 @@ export class AuthError extends Error {
 export function interpretStatus(status: number, kind: CredentialKind, retryAfter?: string | null): AuthError | null {
   if (status === 200) return null;
   const who = kind === "token" ? "Percy token" : "BrowserStack credentials";
+  const are = kind === "token" ? "is" : "are";
   switch (status) {
     case 401:
       return new AuthError(
         401,
-        `Unauthorized: your ${who} are invalid.`,
+        `Unauthorized: your ${who} ${are} invalid.`,
         kind === "token"
           ? "Copy the token again from Project Settings in Percy."
           : "Find your username and access key on your BrowserStack profile page.",
@@ -31,7 +32,7 @@ export function interpretStatus(status: number, kind: CredentialKind, retryAfter
     case 403:
       return new AuthError(
         403,
-        `Forbidden: your ${who} are valid but cannot perform this action.`,
+        `Forbidden: your ${who} ${are} valid but cannot perform this action.`,
         kind === "token"
           ? "Write-only tokens cannot read builds. Use a read-only or full-access token for this project."
           : "Your role does not allow access to this resource.",

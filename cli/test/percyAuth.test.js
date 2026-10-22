@@ -23,7 +23,7 @@ test("sends Token header for percy tokens", async () => {
 });
 
 for (const [status, text] of [
-  [401, /invalid/],
+  [401, /Percy token is invalid/],
   [403, /Forbidden/],
   [404, /Not found/],
   [422, /Unprocessable/],
@@ -34,6 +34,10 @@ for (const [status, text] of [
     await assert.rejects(validatePercyToken("t", fakeFetch(status)), (e) => e instanceof AuthError && text.test(e.message));
   });
 }
+
+test("BrowserStack credentials use plural wording", () => {
+  assert.match(interpretStatus(401, "basic").message, /credentials are invalid/);
+});
 
 test("429 hint includes retry-after", () => {
   assert.match(interpretStatus(429, "token", "30").hint, /30s/);
