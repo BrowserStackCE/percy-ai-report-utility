@@ -1,0 +1,14 @@
+{
+  "name": "percy-report-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Terminal authentication for the Percy AI Report utility",
+  "bin": { "percy-report": "./bin/percy-report.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "login": "node bin/percy-report.js login",
+    "status": "node bin/percy-report.js status",
+    "test": "node --test test/*.test.js"
+  }
+}
