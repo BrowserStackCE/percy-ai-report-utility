@@ -4,8 +4,8 @@
   "description": "Authenticate with Percy / BrowserStack from the terminal and open the Percy AI Report site already signed in",
   "type": "module",
   "bin": {
-    "percy-report-utility": "./bin/percy-report.js",
-    "percy-report": "./bin/percy-report.js"
+    "percy-report-utility": "bin/percy-report.js",
+    "percy-report": "bin/percy-report.js"
   },
   "files": [
     "bin",
