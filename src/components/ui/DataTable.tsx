@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export interface Column<T> {
   key: string;
   header: string;
+  /** Explanation opened from an info icon next to the column title. */
+  info?: string;
   render: (row: T) => ReactNode;
   className?: string;
   align?: "left" | "right";
@@ -19,7 +22,7 @@ interface DataTableProps<T> {
 /** Bordered table with an uppercase header row, matching the builds list. */
 export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-white">
+    <div className="rounded-xl border border-line bg-white">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-line">
@@ -33,7 +36,10 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                   c.className,
                 )}
               >
-                {c.header}
+                <span className={cn("inline-flex items-center gap-1.5", c.align === "right" && "justify-end")}>
+                  {c.header}
+                  {c.info && <InfoTip title={c.header} align={c.align === "right" ? "right" : "left"}>{c.info}</InfoTip>}
+                </span>
               </th>
             ))}
           </tr>

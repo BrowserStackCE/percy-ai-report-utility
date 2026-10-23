@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { Info } from "./Icons";
+import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 interface WidgetProps {
   title: string;
-  /** Tooltip text for the info icon next to the title. */
+  /** Explanation shown in a popover when the info icon next to the title is clicked. */
   info?: string;
   /** Right-aligned header content, such as a menu button or a segmented control. */
   action?: ReactNode;
@@ -12,18 +12,14 @@ interface WidgetProps {
   className?: string;
 }
 
-/** Dashboard card: bold title, info icon, optional header action. */
+/** Dashboard card: bold title, clickable info icon, optional header action. */
 export function Widget({ title, info, action, children, className }: WidgetProps) {
   return (
     <section className={cn("rounded-lg border border-line bg-white p-5", className)}>
       <header className="mb-3 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink-900">
           {title}
-          {info && (
-            <span title={info} className="text-ink-400" aria-label={info} role="img">
-              <Info size={14} />
-            </span>
-          )}
+          {info && <InfoTip title={title}>{info}</InfoTip>}
         </h2>
         {action}
       </header>

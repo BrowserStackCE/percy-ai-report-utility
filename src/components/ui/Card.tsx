@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
+import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("rounded-xl border border-line bg-white", className)}>{children}</div>;
 }
 
-export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {
+export function StatCard({ label, value, hint, info }: { label: string; value: ReactNode; hint: string; info?: string }) {
   return (
     <Card className="p-5">
-      <p className="text-sm font-medium text-ink-500">{label}</p>
+      <p className="flex items-center gap-1.5 text-sm font-medium text-ink-500">
+        {label}
+        {info && <InfoTip title={label}>{info}</InfoTip>}
+      </p>
       <p className="mt-2 text-3xl font-semibold tracking-tight text-ink-900">{value}</p>
       <p className="mt-1 text-xs text-ink-400">{hint}</p>
     </Card>

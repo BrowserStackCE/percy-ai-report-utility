@@ -5,6 +5,7 @@ import { router } from "./router";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProjectsProvider } from "./api/projects/ProjectsProvider";
 import { SelectedProjectProvider } from "./api/projects/SelectedProjectProvider";
+import { DateFormatProvider } from "./lib/dateFormat";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -12,7 +13,9 @@ createRoot(document.getElementById("root")!).render(
     <AuthProvider>
       <ProjectsProvider>
         <SelectedProjectProvider>
-          <RouterProvider router={router} />
+          <DateFormatProvider>
+            <RouterProvider router={router} />
+          </DateFormatProvider>
         </SelectedProjectProvider>
       </ProjectsProvider>
     </AuthProvider>
