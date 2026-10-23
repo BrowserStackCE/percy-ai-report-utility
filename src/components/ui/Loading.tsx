@@ -33,7 +33,7 @@ export function LogoLoader({ label = "Loading", className }: LogoLoaderProps) {
         <span aria-hidden="true" className="logo-ring absolute inset-0 rounded-2xl bg-brand-300/30 [animation-delay:0.5s]" />
         <img src={logo} alt="" className="logo-breathe relative h-12 w-12 rounded-xl shadow-sm" />
       </div>
-      <p className="flex items-center gap-1 text-sm font-medium text-ink-500">
+      <p className="sr-only">
         {label}
         <span aria-hidden="true" className="flex gap-0.5">
           <span className="logo-dot">.</span>
@@ -54,7 +54,7 @@ export function LoadingOverlay({ label, children, className }: { label?: string;
     <div className={cn("relative", className)}>
       {children}
       <div className="absolute inset-0 z-10 flex items-start justify-center bg-page/50 pt-16 backdrop-blur-[1px]">
-        <LogoLoader label={label} className="rounded-2xl border border-line bg-card/90 px-10 py-6 shadow-popover" />
+        <LogoLoader label={label} className="py-0" />
       </div>
     </div>
   );

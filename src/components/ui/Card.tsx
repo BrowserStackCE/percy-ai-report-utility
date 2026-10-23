@@ -9,10 +9,10 @@ export function Card({ children, className }: { children: ReactNode; className?:
 export function StatCard({ label, value, hint, info }: { label: string; value: ReactNode; hint: string; info?: string }) {
   return (
     <Card className="p-5">
-      <p className="flex items-center gap-1.5 text-sm font-medium text-ink-500">
+      <div className="flex min-h-10 items-start gap-1.5 text-sm font-medium leading-5 text-ink-500">
         {label}
         {info && <InfoTip title={label}>{info}</InfoTip>}
-      </p>
+      </div>
       <p className="mt-2 text-3xl font-semibold tracking-tight text-ink-900">{value}</p>
       <p className="mt-1 text-xs text-ink-400">{hint}</p>
     </Card>
