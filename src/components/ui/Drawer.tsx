@@ -53,7 +53,7 @@ export function Drawer({ open, onClose, title, children, widthClassName = "w-[28
         aria-label={title}
         inert={!open}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex max-w-full flex-col bg-white shadow-popover outline-none transition-transform ease-out-soft",
+          "fixed inset-y-0 right-0 z-50 flex max-w-full flex-col bg-card shadow-popover outline-none transition-transform ease-out-soft",
           widthClassName,
           open ? "translate-x-0" : "translate-x-full",
         )}

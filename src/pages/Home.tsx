@@ -1,30 +1,34 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, Navigate } from "react-router";
 import { useBuilds } from "../api/builds/useBuilds";
 import type { Build, BuildState } from "../api/builds/types";
 import { isRetryable } from "../api/errors";
 import { useProjects } from "../api/projects/useProjects";
 import { useSelectedProject } from "../api/projects/SelectedProjectProvider";
+import { count, formatDuration, humanize, shortSha } from "../lib/format";
+import { useDateFormat } from "../lib/dateFormat";
 import {
   Button,
   Card,
   Chip,
   DataTable,
+  LoadingOverlay,
   PageContainer,
   PageHeader,
+  Pagination,
+  Search,
   Select,
-  SearchInput,
   StatusPill,
-  TextField,
+  TableSkeleton,
   Truncate,
   buttonClass,
   type Column,
 } from "../components/ui";
 
-type StateFilter = "all" | BuildState;
+type StateFilter = "all" | Exclude<BuildState, "unknown">;
 
 const stateOptions = [
-  { value: "all" as const, label: "All" },
+  { value: "all" as const, label: "All states" },
   { value: "finished" as const, label: "Finished" },
   { value: "processing" as const, label: "Processing" },
   { value: "waiting" as const, label: "Waiting" },
@@ -39,122 +43,140 @@ const stateTone: Record<BuildState, "mint" | "warn" | "danger" | "neutral"> = {
   unknown: "neutral",
 };
 
-function stateLabel(s: BuildState) {
-  return s === "unknown" ? "Unknown" : s.charAt(0).toUpperCase() + s.slice(1);
-}
+const reviewTone: Record<string, "mint" | "warn" | "danger" | "neutral"> = {
+  approved: "mint",
+  unreviewed: "warn",
+  changes_requested: "danger",
+  rejected: "danger",
+};
 
-const columns: Column<Build>[] = [
+/** Table columns. The date formatter is passed in so times follow the user's chosen time zone. */
+const buildColumns = (formatDateTime: (iso: string | null) => string): Column<Build>[] => [
   {
     key: "build",
     header: "Build",
+    info: "The Percy build number within this project, with its unique build ID underneath. Click the number to open the full build details.",
     render: (b) => (
-      <div className="max-w-xl">
-        <div className="flex items-center gap-3">
-          <Link to={`/reports/${b.id}`} className="shrink-0 text-lg font-semibold text-ink-900 hover:text-brand-600">
-            {b.buildNumber !== null ? `#${b.buildNumber}` : b.id}
-          </Link>
-          {b.branch && (
-            <span className="min-w-0 max-w-56 shrink">
-              <Chip>
-                <Truncate>{b.branch}</Truncate>
-              </Chip>
-            </span>
-          )}
-          {b.createdAt && (
-            <span className="shrink-0 whitespace-nowrap text-sm text-ink-500">{new Date(b.createdAt).toLocaleString()}</span>
-          )}
-        </div>
-        <Truncate className="mt-1 text-sm text-ink-500">
-          {b.isPullRequest && b.pullRequestTitle ? `PR #${b.pullRequestNumber ?? ""} ${b.pullRequestTitle}` : `Build ID ${b.id}`}
-        </Truncate>
+      <div className="min-w-0">
+        <Link to={`/reports/${b.id}`} className="text-base font-semibold text-ink-900 hover:text-brand-600">
+          {b.buildNumber !== null ? `#${b.buildNumber}` : b.id}
+        </Link>
+        <p className="mt-0.5 text-xs text-ink-400">ID {b.id}</p>
+      </div>
+    ),
+  },
+  {
+    key: "branch",
+    header: "Branch / commit",
+    info: "The git branch the build ran on, plus the commit hash and message when Percy has them. Pull-request builds also show the PR number and title.",
+    render: (b) => (
+      <div className="max-w-[14rem] min-w-0">
+        {b.branch ? (
+          <Chip>
+            <Truncate>{b.branch}</Truncate>
+          </Chip>
+        ) : (
+          <span className="text-ink-400">—</span>
+        )}
+        {b.commit?.sha && (
+          <p className="mt-1 truncate text-xs text-ink-500">
+            <span className="font-mono">{shortSha(b.commit.sha)}</span>
+            {b.commit.message ? ` · ${b.commit.message.split("\n")[0]}` : ""}
+          </p>
+        )}
+        {b.isPullRequest && (
+          <p className="mt-1 truncate text-xs text-ink-500">
+            PR #{b.pullRequestNumber ?? "?"} {b.pullRequestTitle ?? ""}
+          </p>
+        )}
       </div>
     ),
   },
   {
     key: "snapshots",
     header: "Snapshots",
+    info: "Total snapshots in the build. Underneath: how many comparisons showed a visual difference from the base build, and how many snapshots are still unreviewed.",
     align: "right",
     render: (b) => (
-      <span className="text-sm tabular-nums text-ink-700">
-        {b.totalSnapshots ?? "—"}
-        {b.snapshotsWithDiffs ? ` · ${b.snapshotsWithDiffs} with diffs` : ""}
-      </span>
+      <div className="text-sm tabular-nums text-ink-700">
+        <span className="font-medium text-ink-900">{count(b.totalSnapshots)}</span>
+        <p className="mt-0.5 text-xs text-ink-500">
+          {count(b.comparisonsWithDiffs)} with diffs · {count(b.unreviewedSnapshots)} unreviewed
+        </p>
+      </div>
     ),
   },
   {
+    key: "review",
+    header: "Review",
+    info: "The review decision for the build: unreviewed, approved, changes requested or rejected. Empty while the build is still processing or failed before review.",
+    render: (b) =>
+      b.reviewState ? (
+        <StatusPill tone={reviewTone[b.reviewState] ?? "neutral"}>{humanize(b.reviewState)}</StatusPill>
+      ) : (
+        <span className="text-ink-400">—</span>
+      ),
+  },
+  {
     key: "state",
-    header: "Build",
+    header: "State",
+    info: "Where the build is in Percy's pipeline: waiting, processing, finished or failed. Failed builds also show the reason.",
+    render: (b) => (
+      <div className="flex flex-col items-start gap-1">
+        <StatusPill tone={stateTone[b.state]}>{humanize(b.state)}</StatusPill>
+        {b.state === "failed" && b.failureReason && <span className="text-xs text-ink-500">{humanize(b.failureReason)}</span>}
+      </div>
+    ),
+  },
+  {
+    key: "when",
+    header: "Started",
+    info: "When the build began, in the time zone chosen in the picker at the top of the page, and how long Percy took to process it.",
     align: "right",
     render: (b) => (
-      <div className="flex flex-col items-end gap-1">
-        <StatusPill tone={stateTone[b.state]}>{stateLabel(b.state)}</StatusPill>
-        {b.state === "failed" && b.failureReason && <span className="text-xs text-ink-500">{b.failureReason.replace(/_/g, " ")}</span>}
+      <div className="text-sm text-ink-700">
+        {formatDateTime(b.createdAt)}
+        <p className="mt-0.5 text-xs text-ink-500">Took {formatDuration(b.processingSeconds)}</p>
       </div>
     ),
   },
 ];
 
+/** Reports: the recent builds of the project chosen in the sidebar. */
 export default function Home() {
   const { projectId } = useSelectedProject();
   const { projects } = useProjects();
-  const { status, builds, error, hasMore, loadingMore, loadMore, reload } = useBuilds(projectId);
-  const [query, setQuery] = useState("");
+  const { formatDateTime, zone } = useDateFormat();
+  const columns = useMemo(() => buildColumns(formatDateTime), [formatDateTime, zone]);
+  const [branch, setBranch] = useState("");
+  const [appliedBranch, setAppliedBranch] = useState("");
   const [state, setState] = useState<StateFilter>("all");
-  const [buildId, setBuildId] = useState("");
-  const navigate = useNavigate();
+
+  const filters = useMemo(
+    () => ({ branch: appliedBranch || undefined, state: state === "all" ? undefined : state }),
+    [appliedBranch, state],
+  );
+  const { status, builds, error, page, hasNext, hasPrev, loadingPage, next, prev, reload } = useBuilds(projectId, filters);
 
   const project = projects.find((p) => p.id === projectId);
+  const filtered = appliedBranch !== "" || state !== "all";
 
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return builds.filter(
-      (b) =>
-        (state === "all" || b.state === state) &&
-        (q === "" ||
-          b.id.includes(q) ||
-          String(b.buildNumber ?? "").includes(q) ||
-          (b.branch ?? "").toLowerCase().includes(q)),
-    );
-  }, [builds, query, state]);
-
-  function open() {
-    const id = buildId.trim();
-    if (id) navigate(`/reports/${encodeURIComponent(id)}`);
-  }
+  // Without a project there is nothing to list: send people to pick one.
+  if (!projectId) return <Navigate to="/projects" replace />;
 
   return (
     <PageContainer>
       <PageHeader
         title="Reports"
-        description="Open the AI review report for a completed Percy build. Reports package the existing Percy AI Review Agent analysis; screenshots are not re-analyzed."
+        description={`Builds from the last 30 days${project ? ` in ${project.name}` : ""}. Open a build to see its details.`}
+        actions={
+          <Link to="/projects" className={buttonClass("secondary")}>
+            Change project
+          </Link>
+        }
       />
 
-      <Card className="p-5">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            open();
-          }}
-          className="flex flex-wrap items-end gap-3"
-        >
-          <TextField
-            label="Percy build ID"
-            value={buildId}
-            onChange={setBuildId}
-            placeholder="For example, 48213907"
-            className="min-w-64 flex-1"
-          />
-          <Button type="submit" variant="primary" className="h-10" disabled={!buildId.trim()}>
-            Open report
-          </Button>
-        </form>
-      </Card>
-
-      {!projectId ? (
-        <Card className="p-5">
-          <p className="text-sm text-ink-700">Select a project in the sidebar to see its recent builds (last 30 days).</p>
-        </Card>
-      ) : error ? (
+      {error ? (
         <Card className="p-5">
           <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
@@ -168,35 +190,85 @@ export default function Home() {
         </Card>
       ) : (
         <>
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder={`Search ${project?.name ?? "project"} builds by build number or branch`}
-            aria-label="Search builds"
-            trailing={
-              <div className="h-full w-36">
-                <Select value={state} options={stateOptions} onChange={setState} ariaLabel="Build state" variant="compact" />
-              </div>
-            }
-          />
+          <form
+            role="search"
+            aria-label="Filter builds"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setAppliedBranch(branch.trim());
+            }}
+            className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-card p-4"
+          >
+            <label className="relative min-w-64 flex-1">
+              <span className="mb-1.5 block text-sm font-medium text-ink-700">Branch</span>
+              <span className="pointer-events-none absolute bottom-0 left-3 flex h-10 items-center text-ink-500">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="Exact branch name, for example main"
+                className="h-10 w-full rounded-lg border border-line-strong bg-card pl-9 pr-9 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              {branch && (
+                <button
+                  type="button"
+                  aria-label="Clear branch"
+                  onClick={() => {
+                    setBranch("");
+                    setAppliedBranch("");
+                  }}
+                  className="absolute bottom-0 right-1.5 flex h-10 w-7 items-center justify-center text-lg text-ink-400 hover:text-ink-900"
+                >
+                  ×
+                </button>
+              )}
+            </label>
+            <div className="w-44">
+              <span className="mb-1.5 block text-sm font-medium text-ink-700">State</span>
+              <Select value={state} options={stateOptions} onChange={setState} ariaLabel="Build state" />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" variant="primary" className="h-10">
+                Apply
+              </Button>
+              {filtered && (
+                <Button
+                  className="h-10"
+                  onClick={() => {
+                    setBranch("");
+                    setAppliedBranch("");
+                    setState("all");
+                  }}
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          </form>
 
-          {status === "loading" ? (
-            <p role="status" className="text-sm text-ink-500">Loading recent builds…</p>
+          {status === "loading" && builds.length === 0 ? (
+            <LoadingOverlay label="Loading recent builds">
+              <TableSkeleton rows={6} cols={6} />
+            </LoadingOverlay>
           ) : (
             <>
               <DataTable
                 columns={columns}
-                rows={rows}
+                rows={builds}
                 rowKey={(b) => b.id}
-                empty={builds.length === 0 ? "No builds in the last 30 days for this project." : "No builds match your search."}
+                empty={filtered ? "No builds match these filters." : "No builds in the last 30 days for this project."}
               />
-              {hasMore && (
-                <div className="flex justify-center">
-                  <Button onClick={loadMore} disabled={loadingMore}>
-                    {loadingMore ? "Loading…" : "Load older builds"}
-                  </Button>
-                </div>
-              )}
+              <Pagination
+                page={page}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                onPrev={prev}
+                onNext={next}
+                busy={loadingPage}
+                summary={`${builds.length} build${builds.length === 1 ? "" : "s"} on this page`}
+              />
             </>
           )}
         </>

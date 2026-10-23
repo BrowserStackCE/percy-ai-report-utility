@@ -13,7 +13,7 @@ export function Chip({ children, mono = false }: { children: ReactNode; mono?: b
 /** Keyboard key hint, for example [ ] to switch browsers. */
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line-strong bg-white px-1.5 font-mono text-xs text-ink-700">
+    <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-line-strong bg-card px-1.5 font-mono text-xs text-ink-700">
       {children}
     </kbd>
   );

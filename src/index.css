@@ -23,6 +23,9 @@
   --color-page: #f6f5f4;
   --color-surface: #f2f3f5;
   --color-chip: #eef0f3;
+  --color-card: #ffffff;
+  --color-skeleton-a: #eceef2;
+  --color-skeleton-b: #f6f7f9;
 
   /* Shell */
   --color-shell: #111827;
@@ -43,6 +46,41 @@
   --default-transition-duration: 500ms;
   --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-ui: 500ms;
+}
+
+/* Dark palette: the same tokens, re-pointed. Components never hard-code colours, so they follow. */
+.dark {
+  color-scheme: dark;
+  --color-brand-50: #1b2347;
+  --color-brand-100: #232e5e;
+  --color-brand-300: #5c70dd;
+  --color-brand-500: #6b7ff0;
+  --color-brand-600: #8394f3;
+  --color-brand-700: #a9b5f7;
+
+  --color-ink-900: #eef0f4;
+  --color-ink-700: #c9ced8;
+  --color-ink-500: #98a1b0;
+  --color-ink-400: #7b8494;
+  --color-ink-300: #4f5766;
+  --color-line: #262c37;
+  --color-line-strong: #343b49;
+  --color-page: #0d1117;
+  --color-surface: #1a202b;
+  --color-chip: #1f2632;
+  --color-card: #151a23;
+  --color-skeleton-a: #1d2430;
+  --color-skeleton-b: #283040;
+
+  --color-mint-50: #10281c;
+  --color-mint-300: #2f7a52;
+  --color-mint-700: #6fd49b;
+  --color-danger-50: #321a18;
+  --color-danger-600: #f07a6e;
+  --color-warn-50: #302410;
+  --color-warn-700: #e8b45a;
+
+  --shadow-popover: 0 8px 24px -4px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
 }
 
 html {
@@ -81,13 +119,30 @@ body {
   to { background-position: 200% 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #eceef2 25%, #f6f7f9 50%, #eceef2 75%);
+  background: linear-gradient(90deg, var(--color-skeleton-a) 25%, var(--color-skeleton-b) 50%, var(--color-skeleton-a) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Logo loader: the logo breathes inside a softly expanding ring. */
+@keyframes logo-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes logo-ring {
+  0% { transform: scale(0.85); opacity: 0.55; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+@keyframes logo-dots {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.logo-breathe { animation: logo-breathe 1.6s var(--ease-out-soft) infinite; }
+.logo-ring { animation: logo-ring 1.6s var(--ease-out-soft) infinite; }
+.logo-dot { animation: logo-dots 1.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .page-enter, .pop-in, .skeleton { animation: none; }
+  .page-enter, .pop-in, .skeleton, .logo-breathe, .logo-ring, .logo-dot { animation: none; }
 }
 
 :focus-visible {

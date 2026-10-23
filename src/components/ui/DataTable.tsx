@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export interface Column<T> {
   key: string;
   header: string;
+  /** Explanation opened from an info icon next to the column title. */
+  info?: string;
   render: (row: T) => ReactNode;
   className?: string;
   align?: "left" | "right";
@@ -19,7 +22,7 @@ interface DataTableProps<T> {
 /** Bordered table with an uppercase header row, matching the builds list. */
 export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-white">
+    <div className="overflow-x-auto rounded-xl border border-line bg-card">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-line">
@@ -28,12 +31,15 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                 key={c.key}
                 scope="col"
                 className={cn(
-                  "px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500",
+                  "whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6",
                   c.align === "right" && "text-right",
                   c.className,
                 )}
               >
-                {c.header}
+                <span className={cn("inline-flex items-center gap-1.5", c.align === "right" && "justify-end")}>
+                  {c.header}
+                  {c.info && <InfoTip title={c.header} align={c.align === "right" ? "right" : "left"}>{c.info}</InfoTip>}
+                </span>
               </th>
             ))}
           </tr>
@@ -42,7 +48,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
           {rows.map((row) => (
             <tr key={rowKey(row)} className="align-top transition-colors hover:bg-page/60">
               {columns.map((c) => (
-                <td key={c.key} className={cn("px-6 py-5", c.align === "right" && "text-right", c.className)}>
+                <td key={c.key} className={cn("px-4 py-5 first:pl-6 last:pr-6", c.align === "right" && "text-right", c.className)}>
                   {c.render(row)}
                 </td>
               ))}

@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
+import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border border-line bg-white", className)}>{children}</div>;
+  return <div className={cn("rounded-xl border border-line bg-card", className)}>{children}</div>;
 }
 
-export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {
+export function StatCard({ label, value, hint, info }: { label: string; value: ReactNode; hint: string; info?: string }) {
   return (
     <Card className="p-5">
-      <p className="text-sm font-medium text-ink-500">{label}</p>
+      <div className="flex min-h-10 items-start gap-1.5 text-sm font-medium leading-5 text-ink-500">
+        {label}
+        {info && <InfoTip title={label}>{info}</InfoTip>}
+      </div>
       <p className="mt-2 text-3xl font-semibold tracking-tight text-ink-900">{value}</p>
       <p className="mt-1 text-xs text-ink-400">{hint}</p>
     </Card>
@@ -25,7 +29,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 /** Light informational notice, like "No significant visual changes in this build". */
 export function Notice({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs text-ink-700">
+    <div className="flex items-start gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-700">
       {children}
     </div>
   );

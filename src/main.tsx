@@ -5,16 +5,22 @@ import { router } from "./router";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProjectsProvider } from "./api/projects/ProjectsProvider";
 import { SelectedProjectProvider } from "./api/projects/SelectedProjectProvider";
+import { DateFormatProvider } from "./lib/dateFormat";
+import { ThemeProvider } from "./lib/theme";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AuthProvider>
-      <ProjectsProvider>
-        <SelectedProjectProvider>
-          <RouterProvider router={router} />
-        </SelectedProjectProvider>
-      </ProjectsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ProjectsProvider>
+          <SelectedProjectProvider>
+            <DateFormatProvider>
+              <RouterProvider router={router} />
+            </DateFormatProvider>
+          </SelectedProjectProvider>
+        </ProjectsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

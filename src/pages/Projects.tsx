@@ -1,102 +1,121 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { isRetryable } from "../api/errors";
 import { useProjects } from "../api/projects/useProjects";
+import { useSelectedProject } from "../api/projects/SelectedProjectProvider";
 import type { Project } from "../api/projects/types";
+import { useDateFormat } from "../lib/dateFormat";
 import {
   Button,
   Card,
   Chip,
-  DataTable,
+  LoadingOverlay,
   PageContainer,
   PageHeader,
-  SearchInput,
+  Pagination,
+  Search,
   Select,
   StatusPill,
+  TableSkeleton,
   Truncate,
   buttonClass,
-  type Column,
 } from "../components/ui";
 
 type KindFilter = "all" | "web" | "app";
 
 const kindOptions = [
-  { value: "all" as const, label: "All" },
+  { value: "all" as const, label: "All types" },
   { value: "web" as const, label: "Web" },
   { value: "app" as const, label: "App" },
 ];
 
-function formatDate(iso: string | null) {
-  return iso ? new Date(iso).toLocaleDateString() : "—";
+/** Projects shown per page. Percy returns every project the credentials can see, so paging is done here. */
+const PAGE_SIZE = 20;
+
+/** Properly laid-out search box: icon, full-width input, and the type filter as a separate control. */
+function ProjectSearch({
+  query,
+  onQuery,
+  kind,
+  onKind,
+}: {
+  query: string;
+  onQuery: (v: string) => void;
+  kind: KindFilter;
+  onKind: (v: KindFilter) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <label className="relative min-w-64 flex-1">
+        <span className="sr-only">Search projects</span>
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-500">
+          <Search size={18} />
+        </span>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder="Search projects by name or slug"
+          className="h-11 w-full rounded-lg border border-line-strong bg-card pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        />
+      </label>
+      <div className="w-44">
+        <Select value={kind} options={kindOptions} onChange={onKind} ariaLabel="Project type" />
+      </div>
+    </div>
+  );
 }
 
-const columns: Column<Project>[] = [
-  {
-    key: "project",
-    header: "Project",
-    render: (p) => (
-      <div className="max-w-xl">
-        <a
-          href={p.percyUrl ?? undefined}
-          target="_blank"
-          rel="noreferrer"
-          className="text-base font-semibold text-ink-900 hover:text-brand-600"
+function ProjectRow({ project, selected, onOpen }: { project: Project; selected: boolean; onOpen: (p: Project) => void }) {
+  const { formatDate } = useDateFormat();
+  return (
+    <tr
+      className="cursor-pointer align-top transition-colors hover:bg-page/60 focus-within:bg-page/60"
+      onClick={() => onOpen(project)}
+      aria-selected={selected}
+    >
+      <td className="px-4 py-5 first:pl-6">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(project);
+          }}
+          className="block w-full max-w-[15rem] text-left"
         >
-          {p.name}
-        </a>
-        <Truncate className="mt-0.5 text-sm text-ink-500">{p.fullSlug}</Truncate>
-      </div>
-    ),
-  },
-  {
-    key: "organization",
-    header: "Organization",
-    render: (p) => <span className="text-sm text-ink-700">{p.organization?.name ?? "—"}</span>,
-  },
-  {
-    key: "type",
-    header: "Type",
-    render: (p) => (
-      <div className="flex items-center gap-2">
-        <Chip>{p.type}</Chip>
-        {p.demo && <Chip>demo</Chip>}
-      </div>
-    ),
-  },
-  {
-    key: "branch",
-    header: "Base branch",
-    render: (p) => (p.defaultBaseBranch ? <Chip mono>{p.defaultBaseBranch}</Chip> : <span className="text-ink-400">—</span>),
-  },
-  {
-    key: "usage",
-    header: "Screenshots",
-    align: "right",
-    render: (p) => (
-      <span className="text-sm tabular-nums text-ink-700">
-        {p.usage ?? "—"}
-        {p.screenshotLimit ? ` / ${p.screenshotLimit}` : ""}
-      </span>
-    ),
-  },
-  {
-    key: "updated",
-    header: "Updated",
-    align: "right",
-    render: (p) => <span className="whitespace-nowrap text-sm text-ink-500">{formatDate(p.updatedAt)}</span>,
-  },
-  {
-    key: "status",
-    header: "Status",
-    align: "right",
-    render: (p) => <StatusPill tone={p.enabled ? "mint" : "warn"}>{p.enabled ? "Enabled" : "Archived"}</StatusPill>,
-  },
-];
+          <span className="text-base font-semibold text-ink-900 hover:text-brand-600">{project.name}</span>
+          <Truncate className="mt-0.5 text-sm text-ink-500">{project.fullSlug}</Truncate>
+        </button>
+      </td>
+      <td className="hidden px-4 py-5 text-sm text-ink-700 2xl:table-cell">{project.organization?.name ?? "—"}</td>
+      <td className="px-4 py-5">
+        <div className="flex items-center gap-2">
+          <Chip>{project.type}</Chip>
+          {project.demo && <Chip>demo</Chip>}
+        </div>
+      </td>
+      <td className="px-4 py-5">
+        {project.defaultBaseBranch ? <Chip mono>{project.defaultBaseBranch}</Chip> : <span className="text-ink-400">—</span>}
+      </td>
+      <td className="px-4 py-5 text-right text-sm tabular-nums text-ink-700">
+        {project.usage ?? "—"}
+        {project.screenshotLimit ? ` / ${project.screenshotLimit}` : ""}
+      </td>
+      <td className="whitespace-nowrap px-4 py-5 text-right text-sm text-ink-500">{formatDate(project.updatedAt)}</td>
+      <td className="px-4 py-5 text-right last:pr-6">
+        <StatusPill tone={project.enabled ? "mint" : "warn"}>{project.enabled ? "Enabled" : "Archived"}</StatusPill>
+      </td>
+    </tr>
+  );
+}
 
 export default function Projects() {
   const { status, projects, error, reload } = useProjects();
+  const { projectId, setProjectId } = useSelectedProject();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
+  const [page, setPage] = useState(1);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -107,12 +126,26 @@ export default function Projects() {
     );
   }, [projects, query, kind]);
 
+  // A new search or filter always starts again from the first page.
+  useEffect(() => setPage(1), [query, kind]);
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * PAGE_SIZE;
+  const visible = rows.slice(start, start + PAGE_SIZE);
+
+  /** Picking a project selects it and shows its builds; it no longer leaves for percy.io. */
+  function open(project: Project) {
+    setProjectId(project.id);
+    navigate("/");
+  }
+
   return (
     <PageContainer>
-      <PageHeader title="Projects" description="Every Percy project your credentials can access." />
+      <PageHeader title="Projects" description="Pick a project to see its recent builds." />
 
       {error && (
-        <Card className="p-5" >
+        <Card className="p-5">
           <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
           <div className="mt-3 flex gap-2">
@@ -127,26 +160,52 @@ export default function Projects() {
 
       {!error && (
         <>
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Search projects by name or slug"
-            aria-label="Search projects"
-            trailing={
-              <div className="h-full w-32">
-                <Select value={kind} options={kindOptions} onChange={setKind} ariaLabel="Project type" variant="compact" />
-              </div>
-            }
-          />
+          <ProjectSearch query={query} onQuery={setQuery} kind={kind} onKind={setKind} />
 
           {status === "loading" && projects.length === 0 ? (
-            <p role="status" className="text-sm text-ink-500">Loading projects…</p>
+            <LoadingOverlay label="Loading projects">
+              <TableSkeleton rows={6} cols={6} />
+            </LoadingOverlay>
           ) : (
-            <DataTable
-              columns={columns}
-              rows={rows}
-              rowKey={(p) => p.id}
-              empty={projects.length === 0 ? "No projects found for these credentials." : "No projects match your search."}
+            <div className="overflow-x-auto rounded-xl border border-line bg-card">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line">
+                    {["Project", "Organization", "Type", "Base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
+                      <th
+                        key={h}
+                        scope="col"
+                        className={`whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6 ${i === 0 ? "w-[15rem]" : ""} ${i === 1 ? "hidden 2xl:table-cell" : ""} ${i >= 4 ? "text-right" : ""}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {visible.map((p) => (
+                    <ProjectRow key={p.id} project={p} selected={p.id === projectId} onOpen={open} />
+                  ))}
+                  {visible.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-sm text-ink-400">
+                        {projects.length === 0 ? "No projects found for these credentials." : "No projects match your search."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {rows.length > PAGE_SIZE && (
+            <Pagination
+              page={current}
+              hasPrev={current > 1}
+              hasNext={current < pageCount}
+              onPrev={() => setPage(current - 1)}
+              onNext={() => setPage(current + 1)}
+              summary={`${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} projects`}
             />
           )}
         </>

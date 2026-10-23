@@ -6,6 +6,7 @@ export { Chip, Kbd } from "./Chip";
 export { Card, StatCard, Eyebrow, Notice } from "./Card";
 export { Checkbox, Radio, SearchInput, TextField } from "./Inputs";
 export { Popover } from "./Popover";
+export { InfoTip } from "./InfoTip";
 export { Select, type SelectOption } from "./Select";
 export { Segmented, OptionTileGroup } from "./Segmented";
 export { PageHeader } from "./PageHeader";
@@ -19,5 +20,7 @@ export { BarChart, type BarGroup } from "./BarChart";
 export { Drawer } from "./Drawer";
 export { PageContainer } from "./PageContainer";
 export { Truncate } from "./Truncate";
+export { Pagination } from "./Pagination";
+export { Skeleton, SkeletonLines, LogoLoader, LoadingOverlay, TableSkeleton, CardSkeleton } from "./Loading";
 export { HamburgerIcon } from "./HamburgerIcon";
 

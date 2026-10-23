@@ -17,7 +17,7 @@ interface SegmentedProps<T extends string> {
 /** Icon segmented toggle, like the split / overlay view switch in the review header. */
 export function Segmented<T extends string>({ value, options, onChange, ariaLabel }: SegmentedProps<T>) {
   return (
-    <div role="group" aria-label={ariaLabel} className="inline-flex rounded-lg border border-line-strong bg-white p-0.5">
+    <div role="group" aria-label={ariaLabel} className="inline-flex rounded-lg border border-line-strong bg-card p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -70,7 +70,7 @@ export function OptionTileGroup<T extends string>({
               "flex h-12 items-center justify-center rounded-lg border px-4 text-sm font-medium transition-colors",
               o.value === value
                 ? "border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500"
-                : "border-line-strong bg-white text-ink-700 hover:bg-surface",
+                : "border-line-strong bg-card text-ink-700 hover:bg-surface",
               tileClassName,
             )}
           >

@@ -41,7 +41,7 @@ export function Select<T extends string>({
 
   return (
     <Popover
-      panelClassName="w-full min-w-48 py-1.5"
+      panelClassName="w-full min-w-56 py-1.5"
       trigger={({ toggle, triggerProps }) => (
         <button
           type="button"
@@ -51,7 +51,7 @@ export function Select<T extends string>({
           className={cn(
             "flex w-full items-center justify-between gap-2 text-sm text-ink-900 transition-colors",
             variant === "field"
-              ? "h-10 rounded-lg border border-line-strong bg-white px-3 hover:bg-surface"
+              ? "h-10 rounded-lg border border-line-strong bg-card px-3 hover:bg-surface"
               : "h-full px-4 font-medium hover:bg-surface",
             className,
           )}
@@ -71,7 +71,7 @@ export function Select<T extends string>({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
-                className="h-9 w-full rounded-lg border border-brand-500 bg-white px-3 text-sm placeholder:text-ink-400 focus:outline-none"
+                className="h-9 w-full rounded-lg border border-brand-500 bg-card px-3 text-sm placeholder:text-ink-400 focus:outline-none"
               />
             </div>
           )}
@@ -90,7 +90,7 @@ export function Select<T extends string>({
                     o.value === value ? "font-semibold text-ink-900" : "text-ink-700",
                   )}
                 >
-                  <span className="flex h-4 w-4 items-center justify-center text-brand-500">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center text-brand-500">
                     {o.value === value && <Check size={16} strokeWidth={2.5} />}
                   </span>
                   <span className="truncate">{o.label}</span>

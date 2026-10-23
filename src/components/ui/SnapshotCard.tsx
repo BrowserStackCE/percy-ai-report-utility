@@ -20,7 +20,7 @@ export function SnapshotCard({ to, title, selected, image, badge }: SnapshotCard
       aria-current={selected ? "true" : undefined}
       className={cn(
         "block rounded-xl border p-2 transition-colors",
-        selected ? "border-mint-300 bg-mint-50" : "border-mint-300/60 bg-white hover:bg-mint-50/50",
+        selected ? "border-mint-300 bg-mint-50" : "border-mint-300/60 bg-card hover:bg-mint-50/50",
       )}
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-line bg-surface">

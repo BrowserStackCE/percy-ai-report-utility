@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
-import { Layers, Settings, Spark } from "../ui/Icons";
+import { FileText, Folder } from "../ui/Icons";
 import { useProjects } from "../../api/projects/useProjects";
 import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
 import { Select } from "../ui/Select";
-import { NewTag } from "../ui/Badge";
 import { Eyebrow } from "../ui/Card";
 import { cn } from "../ui/cn";
 import { useSidebar } from "./sidebarContext";
@@ -47,6 +46,7 @@ export default function Sidebar() {
   const { collapsed } = useSidebar();
   const { projects: loaded } = useProjects();
   const { projectId: project, setProjectId: setProject } = useSelectedProject();
+  const navigate = useNavigate();
   const projects = loaded.map((p) => ({ value: p.id, label: p.name }));
 
   return (
@@ -54,7 +54,7 @@ export default function Sidebar() {
       id="app-sidebar"
       aria-label="Sidebar"
       className={cn(
-        "flex h-full shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-white transition-[width]",
+        "flex h-full shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-card transition-[width]",
         collapsed ? "w-16" : "w-64",
       )}
     >
@@ -76,7 +76,10 @@ export default function Sidebar() {
           <Select
             value={project}
             options={projects}
-            onChange={setProject}
+            onChange={(id) => {
+              setProject(id);
+              navigate("/");
+            }}
             ariaLabel="Project"
             placeholder="Select project"
             searchable
@@ -87,10 +90,8 @@ export default function Sidebar() {
 
       <nav aria-label="Primary" className={cn("flex-1 p-3", !collapsed && "border-t border-line p-4")}>
         <div className="space-y-0.5">
-          <SidebarNavItem to="/projects" icon={<Layers size={18} />} label="Projects" />
-          <SidebarNavItem to="/" end icon={<Layers size={18} />} label="Reports" />
-          <SidebarNavItem to="/settings" icon={<Settings size={18} />} label="Settings" />
-          <SidebarNavItem to="/ai-features" icon={<Spark size={18} />} label="AI features" tag={<NewTag />} />
+          <SidebarNavItem to="/projects" icon={<Folder size={18} />} label="Projects" />
+          <SidebarNavItem to="/" end icon={<FileText size={18} />} label="Reports" />
         </div>
       </nav>
     </aside>
