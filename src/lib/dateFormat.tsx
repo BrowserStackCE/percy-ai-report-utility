@@ -41,7 +41,7 @@ function readStored(): string {
 }
 
 /**
- * Format an ISO timestamp in the given zone, for example "30 Sep 2026, 20:24:32 IST".
+ * Format an ISO timestamp in the given zone on a 12-hour clock, for example "30 Sep 2026, 08:24:32 PM IST".
  * Returns "—" for empty or unparsable input. "local" uses the browser's own zone.
  */
 export function formatInZone(iso: string | null, zone: string): string {
@@ -57,10 +57,11 @@ export function formatInZone(iso: string | null, zone: string): string {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hour12: true,
     timeZone,
   }).format(d);
-  return `${text} ${option?.short ?? zone}`;
+  // en-GB renders the 12-hour marker as "am"/"pm"; show it upper-case for readability.
+  return `${text.replace(/\b(am|pm)\b/, (m) => m.toUpperCase())} ${option?.short ?? zone}`;
 }
 
 /** Date only, for example "30 Sep 2026", in the given zone. */

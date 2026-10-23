@@ -10,22 +10,22 @@ const SEP = "Sept?";
 describe("formatInZone", () => {
   it("defaults to India time, shown with an IST suffix", () => {
     expect(DEFAULT_TIME_ZONE).toBe("Asia/Kolkata");
-    expect(formatInZone(ISO, DEFAULT_TIME_ZONE)).toMatch(new RegExp(`^30 ${SEP} 2026, 20:24:32 IST$`));
+    expect(formatInZone(ISO, DEFAULT_TIME_ZONE)).toMatch(new RegExp(`^30 ${SEP} 2026, 08:24:32 PM IST$`));
   });
 
   it("switches to UTC", () => {
-    expect(formatInZone(ISO, "UTC")).toMatch(new RegExp(`^30 ${SEP} 2026, 14:54:32 UTC$`));
+    expect(formatInZone(ISO, "UTC")).toMatch(new RegExp(`^30 ${SEP} 2026, 02:54:32 PM UTC$`));
   });
 
   it("applies other zones including their daylight-saving offset", () => {
     // 30 Sep is summer time in New York (UTC-4) and London (UTC+1).
-    expect(formatInZone(ISO, "America/New_York")).toMatch(new RegExp(`^30 ${SEP} 2026, 10:54:32 ET$`));
-    expect(formatInZone(ISO, "Europe/London")).toMatch(new RegExp(`^30 ${SEP} 2026, 15:54:32 UK$`));
+    expect(formatInZone(ISO, "America/New_York")).toMatch(new RegExp(`^30 ${SEP} 2026, 10:54:32 AM ET$`));
+    expect(formatInZone(ISO, "Europe/London")).toMatch(new RegExp(`^30 ${SEP} 2026, 03:54:32 PM UK$`));
   });
 
   it("rolls the calendar date over when the zone is on the next day", () => {
     // 20:30 UTC is already the next morning in India.
-    expect(formatInZone("2026-09-30T20:30:00.000Z", "Asia/Kolkata")).toBe("01 Oct 2026, 02:00:00 IST");
+    expect(formatInZone("2026-09-30T20:30:00.000Z", "Asia/Kolkata")).toBe("01 Oct 2026, 02:00:00 AM IST");
   });
 
   it("returns a dash for empty or invalid input", () => {
