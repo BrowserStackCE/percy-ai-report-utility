@@ -11,7 +11,7 @@ import {
   CardSkeleton,
   Chip,
   External,
-  LogoLoader,
+  LoadingOverlay,
   PageContainer,
   PageHeader,
   Skeleton,
@@ -83,20 +83,21 @@ function DetailsSkeleton() {
         <Skeleton className="h-6 w-20 rounded-full" />
         <Skeleton className="h-6 w-24 rounded-full" />
       </div>
-      <LogoLoader label="Loading build" className="py-6" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <CardSkeleton key={i} />
-        ))}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {Array.from({ length: 6 }, (_, i) => (
-          <CardSkeleton key={i}>
-            <Skeleton className="h-4 w-32" />
-            <SkeletonLines lines={5} className="mt-5" />
-          </CardSkeleton>
-        ))}
-      </div>
+      <LoadingOverlay label="Loading build" className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+        <div className="gap-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+          {Array.from({ length: 6 }, (_, i) => (
+            <CardSkeleton key={i}>
+              <Skeleton className="h-4 w-32" />
+              <SkeletonLines lines={5} className="mt-5" />
+            </CardSkeleton>
+          ))}
+        </div>
+      </LoadingOverlay>
     </PageContainer>
   );
 }
@@ -224,7 +225,7 @@ export default function BuildDetails() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="gap-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
         <Widget title="Review progress" info="Snapshots reviewed vs still waiting for a decision.">
           <StackedBar segments={reviewSegments} />
           <ul className="mt-4 space-y-2 text-sm">
@@ -236,7 +237,7 @@ export default function BuildDetails() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 border-t border-line pt-4">
+          <div className="mt-5">
             <Facts
               rows={[
                 ["Review state", humanize(b.reviewState)],
@@ -339,7 +340,7 @@ export default function BuildDetails() {
                   ]}
                 />
               </div>
-              <div className="mt-4 border-t border-line pt-4">
+              <div className="mt-5">
                 <Facts
                   rows={[
                     ["Summary status", humanize(ai.summaryStatus)],
@@ -408,7 +409,7 @@ export default function BuildDetails() {
             ]}
           />
           {b.featureInteractions.length > 0 && (
-            <div className="mt-4 border-t border-line pt-4">
+            <div className="mt-5">
               <p className="mb-2 text-sm text-ink-500">State-changing feature interactions</p>
               <div className="flex flex-wrap gap-2">
                 {b.featureInteractions.map((f) => (

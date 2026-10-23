@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
-import { Layers } from "../ui/Icons";
+import { FileText, Folder } from "../ui/Icons";
 import { useProjects } from "../../api/projects/useProjects";
 import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
 import { Select } from "../ui/Select";
@@ -53,7 +53,7 @@ export default function Sidebar() {
       id="app-sidebar"
       aria-label="Sidebar"
       className={cn(
-        "flex h-full shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-white transition-[width]",
+        "flex h-full shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-card transition-[width]",
         collapsed ? "w-16" : "w-64",
       )}
     >
@@ -86,8 +86,8 @@ export default function Sidebar() {
 
       <nav aria-label="Primary" className={cn("flex-1 p-3", !collapsed && "border-t border-line p-4")}>
         <div className="space-y-0.5">
-          <SidebarNavItem to="/projects" icon={<Layers size={18} />} label="Projects" />
-          <SidebarNavItem to="/" end icon={<Layers size={18} />} label="Reports" />
+          <SidebarNavItem to="/projects" icon={<Folder size={18} />} label="Projects" />
+          <SidebarNavItem to="/" end icon={<FileText size={18} />} label="Reports" />
         </div>
       </nav>
     </aside>

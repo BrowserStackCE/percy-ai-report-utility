@@ -12,7 +12,7 @@ import {
   Card,
   Chip,
   DataTable,
-  LogoLoader,
+  LoadingOverlay,
   PageContainer,
   PageHeader,
   Pagination,
@@ -197,7 +197,7 @@ export default function Home() {
               e.preventDefault();
               setAppliedBranch(branch.trim());
             }}
-            className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-white p-4"
+            className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-card p-4"
           >
             <label className="relative min-w-64 flex-1">
               <span className="mb-1.5 block text-sm font-medium text-ink-700">Branch</span>
@@ -209,7 +209,7 @@ export default function Home() {
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
                 placeholder="Exact branch name, for example main"
-                className="h-10 w-full rounded-lg border border-line-strong bg-white pl-9 pr-9 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="h-10 w-full rounded-lg border border-line-strong bg-card pl-9 pr-9 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
               {branch && (
                 <button
@@ -249,10 +249,9 @@ export default function Home() {
           </form>
 
           {status === "loading" && builds.length === 0 ? (
-            <div>
-              <LogoLoader label="Loading recent builds" className="py-8" />
+            <LoadingOverlay label="Loading recent builds">
               <TableSkeleton rows={6} cols={6} />
-            </div>
+            </LoadingOverlay>
           ) : (
             <>
               <DataTable

@@ -21,6 +21,6 @@ export { Drawer } from "./Drawer";
 export { PageContainer } from "./PageContainer";
 export { Truncate } from "./Truncate";
 export { Pagination } from "./Pagination";
-export { Skeleton, SkeletonLines, LogoLoader, TableSkeleton, CardSkeleton } from "./Loading";
+export { Skeleton, SkeletonLines, LogoLoader, LoadingOverlay, TableSkeleton, CardSkeleton } from "./Loading";
 export { HamburgerIcon } from "./HamburgerIcon";
 

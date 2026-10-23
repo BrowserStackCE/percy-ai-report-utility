@@ -9,7 +9,7 @@ import {
   Button,
   Card,
   Chip,
-  LogoLoader,
+  LoadingOverlay,
   PageContainer,
   PageHeader,
   Pagination,
@@ -56,7 +56,7 @@ function ProjectSearch({
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           placeholder="Search projects by name or slug"
-          className="h-11 w-full rounded-lg border border-line-strong bg-white pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          className="h-11 w-full rounded-lg border border-line-strong bg-card pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
       <div className="w-44">
@@ -163,12 +163,11 @@ export default function Projects() {
           <ProjectSearch query={query} onQuery={setQuery} kind={kind} onKind={setKind} />
 
           {status === "loading" && projects.length === 0 ? (
-            <div>
-              <LogoLoader label="Loading projects" className="py-8" />
+            <LoadingOverlay label="Loading projects">
               <TableSkeleton rows={6} cols={7} />
-            </div>
+            </LoadingOverlay>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-line bg-white">
+            <div className="overflow-hidden rounded-xl border border-line bg-card">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-line">

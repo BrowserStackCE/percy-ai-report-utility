@@ -45,10 +45,25 @@ export function LogoLoader({ label = "Loading", className }: LogoLoaderProps) {
   );
 }
 
+/**
+ * Puts the brand loader on top of a skeleton. The skeleton keeps its place in the layout, so nothing
+ * jumps; the loader floats centred above it on a soft backdrop.
+ */
+export function LoadingOverlay({ label, children, className }: { label?: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("relative", className)}>
+      {children}
+      <div className="absolute inset-0 z-10 flex items-start justify-center bg-page/50 pt-16 backdrop-blur-[1px]">
+        <LogoLoader label={label} className="rounded-2xl border border-line bg-card/90 px-10 py-6 shadow-popover" />
+      </div>
+    </div>
+  );
+}
+
 /** Table-shaped placeholder: a header row and shimmering body rows. */
 export function TableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="overflow-hidden rounded-xl border border-line bg-white">
+    <div role="status" aria-label="Loading" className="overflow-hidden rounded-xl border border-line bg-card">
       <div aria-hidden="true" className="flex gap-6 border-b border-line px-6 py-4">
         {Array.from({ length: cols }, (_, i) => (
           <Skeleton key={i} className="h-3 flex-1" />
@@ -73,7 +88,7 @@ export function TableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?: nu
 /** Card-shaped placeholder for stat cards and detail widgets. */
 export function CardSkeleton({ children, className }: { children?: ReactNode; className?: string }) {
   return (
-    <div aria-hidden="true" className={cn("rounded-xl border border-line bg-white p-5", className)}>
+    <div aria-hidden="true" className={cn("rounded-xl border border-line bg-card p-5", className)}>
       {children ?? (
         <>
           <Skeleton className="h-3 w-24" />
