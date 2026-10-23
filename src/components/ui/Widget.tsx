@@ -15,7 +15,7 @@ interface WidgetProps {
 /** Dashboard card: bold title, clickable info icon, optional header action. */
 export function Widget({ title, info, action, children, className }: WidgetProps) {
   return (
-    <section className={cn("rounded-lg border border-line bg-white p-5", className)}>
+    <section className={cn("flex flex-col rounded-lg border border-line bg-card p-5", className)}>
       <header className="mb-3 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink-900">
           {title}

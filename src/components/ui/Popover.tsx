@@ -50,7 +50,7 @@ export function Popover({ trigger, children, align = "left", panelClassName }: P
           id={panelId}
           role="dialog"
           className={cn(
-            "pop-in absolute z-30 mt-2 rounded-xl border border-line bg-white shadow-popover",
+            "pop-in absolute z-30 mt-2 rounded-xl border border-line bg-card shadow-popover",
             align === "right" ? "right-0" : "left-0",
             panelClassName,
           )}

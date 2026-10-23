@@ -3,7 +3,7 @@ import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border border-line bg-white", className)}>{children}</div>;
+  return <div className={cn("rounded-xl border border-line bg-card", className)}>{children}</div>;
 }
 
 export function StatCard({ label, value, hint, info }: { label: string; value: ReactNode; hint: string; info?: string }) {
@@ -29,7 +29,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 /** Light informational notice, like "No significant visual changes in this build". */
 export function Notice({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs text-ink-700">
+    <div className="flex items-start gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-700">
       {children}
     </div>
   );

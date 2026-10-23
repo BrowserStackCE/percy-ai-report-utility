@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router";
 import Breadcrumb from "./Breadcrumb";
 import Sidebar from "./Sidebar";
+import ThemeToggle from "./ThemeToggle";
 import TimeZonePicker from "./TimeZonePicker";
 import SidebarProvider from "./SidebarProvider";
 
@@ -21,8 +22,9 @@ export default function Layout() {
               <div className="min-w-0 flex-1">
                 <Breadcrumb />
               </div>
-              <div className="flex shrink-0 items-center rounded-xl border border-line bg-white px-4">
+              <div className="flex shrink-0 items-center gap-3 rounded-xl border border-line bg-card px-4">
                 <TimeZonePicker />
+                <ThemeToggle />
               </div>
             </div>
             <main className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-line bg-page">

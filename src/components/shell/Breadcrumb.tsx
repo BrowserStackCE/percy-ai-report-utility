@@ -37,7 +37,7 @@ export default function Breadcrumb() {
   const match = useMatch("/reports/:buildId");
   const crumbs = useCrumbs(match?.params.buildId);
   return (
-    <nav aria-label="Breadcrumb" className="shrink-0 rounded-xl border border-line bg-white px-6 py-3">
+    <nav aria-label="Breadcrumb" className="shrink-0 rounded-xl border border-line bg-card px-6 py-3">
       <ol className="flex min-w-0 items-center gap-2 text-sm">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;

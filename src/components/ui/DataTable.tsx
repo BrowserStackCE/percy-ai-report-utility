@@ -22,7 +22,7 @@ interface DataTableProps<T> {
 /** Bordered table with an uppercase header row, matching the builds list. */
 export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
   return (
-    <div className="rounded-xl border border-line bg-white">
+    <div className="rounded-xl border border-line bg-card">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-line">

@@ -32,7 +32,7 @@ export function Checkbox({ label, hint, count, checked, onChange, disabled, clas
         aria-hidden="true"
         className={cn(
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500",
-          checked ? "border-brand-500 bg-brand-500 text-white" : "border-ink-300 bg-white",
+          checked ? "border-brand-500 bg-brand-500 text-white" : "border-ink-300 bg-card",
         )}
       >
         {checked && <Check size={14} strokeWidth={3} />}
@@ -81,7 +81,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "
 
 export function SearchInput({ value, onChange, trailing, className, ...rest }: SearchInputProps) {
   return (
-    <div className={cn("flex h-11 items-stretch overflow-hidden rounded-lg border border-line bg-white focus-within:border-brand-500", className)}>
+    <div className={cn("flex h-11 items-stretch overflow-hidden rounded-lg border border-line bg-card focus-within:border-brand-500", className)}>
       <span className="flex items-center pl-3 text-ink-500"><Search size={18} /></span>
       <input
         type="search"
@@ -110,7 +110,7 @@ export function TextField({ label, value, onChange, id, className, ...rest }: Te
         id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-card px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         {...rest}
       />
     </div>
