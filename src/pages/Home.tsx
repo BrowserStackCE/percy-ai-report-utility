@@ -70,7 +70,7 @@ const buildColumns = (formatDateTime: (iso: string | null) => string): Column<Bu
     header: "Branch / commit",
     info: "The git branch the build ran on, plus the commit hash and message when Percy has them. Pull-request builds also show the PR number and title.",
     render: (b) => (
-      <div className="max-w-xs min-w-0">
+      <div className="max-w-[14rem] min-w-0">
         {b.branch ? (
           <Chip>
             <Truncate>{b.branch}</Truncate>
@@ -134,7 +134,7 @@ const buildColumns = (formatDateTime: (iso: string | null) => string): Column<Bu
     info: "When the build began, in the time zone chosen in the picker at the top of the page, and how long Percy took to process it.",
     align: "right",
     render: (b) => (
-      <div className="whitespace-nowrap text-sm text-ink-700">
+      <div className="text-sm text-ink-700">
         {formatDateTime(b.createdAt)}
         <p className="mt-0.5 text-xs text-ink-500">Took {formatDuration(b.processingSeconds)}</p>
       </div>
