@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
-import { Layers, Settings, Spark } from "../ui/Icons";
+import { Layers } from "../ui/Icons";
 import { useProjects } from "../../api/projects/useProjects";
 import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
 import { Select } from "../ui/Select";
-import { NewTag } from "../ui/Badge";
 import { Eyebrow } from "../ui/Card";
 import { cn } from "../ui/cn";
 import { useSidebar } from "./sidebarContext";
@@ -89,8 +88,6 @@ export default function Sidebar() {
         <div className="space-y-0.5">
           <SidebarNavItem to="/projects" icon={<Layers size={18} />} label="Projects" />
           <SidebarNavItem to="/" end icon={<Layers size={18} />} label="Reports" />
-          <SidebarNavItem to="/settings" icon={<Settings size={18} />} label="Settings" />
-          <SidebarNavItem to="/ai-features" icon={<Spark size={18} />} label="AI features" tag={<NewTag />} />
         </div>
       </nav>
     </aside>
