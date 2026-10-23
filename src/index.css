@@ -86,8 +86,25 @@ body {
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Logo loader: the logo breathes inside a softly expanding ring. */
+@keyframes logo-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes logo-ring {
+  0% { transform: scale(0.85); opacity: 0.55; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+@keyframes logo-dots {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.logo-breathe { animation: logo-breathe 1.6s var(--ease-out-soft) infinite; }
+.logo-ring { animation: logo-ring 1.6s var(--ease-out-soft) infinite; }
+.logo-dot { animation: logo-dots 1.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .page-enter, .pop-in, .skeleton { animation: none; }
+  .page-enter, .pop-in, .skeleton, .logo-breathe, .logo-ring, .logo-dot { animation: none; }
 }
 
 :focus-visible {
