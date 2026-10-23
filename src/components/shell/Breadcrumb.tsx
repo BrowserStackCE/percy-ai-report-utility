@@ -20,13 +20,13 @@ function useCrumbs(buildId: string | undefined): Crumb[] {
   const projectName = projects.find((p) => p.id === projectId)?.name;
 
   const projectsCrumb: Crumb = { label: "Projects", to: "/projects" };
-  const buildsCrumb: Crumb = { label: projectName ?? "Builds", to: "/" };
+  const buildsCrumb: Crumb = { label: projectName ?? "Reports", to: "/" };
 
   if (buildId) {
     const label = build?.buildNumber != null ? `Build #${build.buildNumber}` : `Build ${buildId}`;
     return [projectsCrumb, buildsCrumb, { label }];
   }
-  if (pathname === "/") return [projectsCrumb, { label: projectName ?? "Builds" }];
+  if (pathname === "/") return [projectsCrumb, { label: projectName ?? "Reports" }];
   if (pathname === "/projects") return [{ label: "Projects" }];
   if (pathname === "/login") return [projectsCrumb, { label: "Sign in" }];
   return [projectsCrumb, { label: "Not found" }];

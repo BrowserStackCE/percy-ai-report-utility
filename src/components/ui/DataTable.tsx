@@ -22,7 +22,7 @@ interface DataTableProps<T> {
 /** Bordered table with an uppercase header row, matching the builds list. */
 export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
   return (
-    <div className="rounded-xl border border-line bg-card">
+    <div className="overflow-x-auto rounded-xl border border-line bg-card">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-line">
@@ -31,7 +31,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                 key={c.key}
                 scope="col"
                 className={cn(
-                  "px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500",
+                  "whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6",
                   c.align === "right" && "text-right",
                   c.className,
                 )}
@@ -48,7 +48,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
           {rows.map((row) => (
             <tr key={rowKey(row)} className="align-top transition-colors hover:bg-page/60">
               {columns.map((c) => (
-                <td key={c.key} className={cn("px-6 py-5", c.align === "right" && "text-right", c.className)}>
+                <td key={c.key} className={cn("px-4 py-5 first:pl-6 last:pr-6", c.align === "right" && "text-right", c.className)}>
                   {c.render(row)}
                 </td>
               ))}

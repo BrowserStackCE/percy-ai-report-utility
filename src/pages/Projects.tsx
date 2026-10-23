@@ -74,35 +74,35 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
       onClick={() => onOpen(project)}
       aria-selected={selected}
     >
-      <td className="px-6 py-5">
+      <td className="px-4 py-5 first:pl-6">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onOpen(project);
           }}
-          className="max-w-xl text-left"
+          className="block w-full max-w-[15rem] text-left"
         >
           <span className="text-base font-semibold text-ink-900 hover:text-brand-600">{project.name}</span>
           <Truncate className="mt-0.5 text-sm text-ink-500">{project.fullSlug}</Truncate>
         </button>
       </td>
-      <td className="px-6 py-5 text-sm text-ink-700">{project.organization?.name ?? "—"}</td>
-      <td className="px-6 py-5">
+      <td className="hidden px-4 py-5 text-sm text-ink-700 2xl:table-cell">{project.organization?.name ?? "—"}</td>
+      <td className="px-4 py-5">
         <div className="flex items-center gap-2">
           <Chip>{project.type}</Chip>
           {project.demo && <Chip>demo</Chip>}
         </div>
       </td>
-      <td className="px-6 py-5">
+      <td className="px-4 py-5">
         {project.defaultBaseBranch ? <Chip mono>{project.defaultBaseBranch}</Chip> : <span className="text-ink-400">—</span>}
       </td>
-      <td className="px-6 py-5 text-right text-sm tabular-nums text-ink-700">
+      <td className="px-4 py-5 text-right text-sm tabular-nums text-ink-700">
         {project.usage ?? "—"}
         {project.screenshotLimit ? ` / ${project.screenshotLimit}` : ""}
       </td>
-      <td className="whitespace-nowrap px-6 py-5 text-right text-sm text-ink-500">{formatDate(project.updatedAt)}</td>
-      <td className="px-6 py-5 text-right">
+      <td className="whitespace-nowrap px-4 py-5 text-right text-sm text-ink-500">{formatDate(project.updatedAt)}</td>
+      <td className="px-4 py-5 text-right last:pr-6">
         <StatusPill tone={project.enabled ? "mint" : "warn"}>{project.enabled ? "Enabled" : "Archived"}</StatusPill>
       </td>
     </tr>
@@ -164,10 +164,10 @@ export default function Projects() {
 
           {status === "loading" && projects.length === 0 ? (
             <LoadingOverlay label="Loading projects">
-              <TableSkeleton rows={6} cols={7} />
+              <TableSkeleton rows={6} cols={6} />
             </LoadingOverlay>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-line bg-card">
+            <div className="overflow-x-auto rounded-xl border border-line bg-card">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-line">
@@ -175,7 +175,7 @@ export default function Projects() {
                       <th
                         key={h}
                         scope="col"
-                        className={`px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 ${i >= 4 ? "text-right" : ""}`}
+                        className={`whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6 ${i === 0 ? "w-[15rem]" : ""} ${i === 1 ? "hidden 2xl:table-cell" : ""} ${i >= 4 ? "text-right" : ""}`}
                       >
                         {h}
                       </th>
