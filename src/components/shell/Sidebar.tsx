@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
 import { FileText, Folder } from "../ui/Icons";
@@ -46,6 +46,7 @@ export default function Sidebar() {
   const { collapsed } = useSidebar();
   const { projects: loaded } = useProjects();
   const { projectId: project, setProjectId: setProject } = useSelectedProject();
+  const navigate = useNavigate();
   const projects = loaded.map((p) => ({ value: p.id, label: p.name }));
 
   return (
@@ -75,7 +76,10 @@ export default function Sidebar() {
           <Select
             value={project}
             options={projects}
-            onChange={setProject}
+            onChange={(id) => {
+              setProject(id);
+              navigate("/");
+            }}
             ariaLabel="Project"
             placeholder="Select project"
             searchable

@@ -41,7 +41,7 @@ export function Select<T extends string>({
 
   return (
     <Popover
-      panelClassName="w-full min-w-48 py-1.5"
+      panelClassName="w-full min-w-56 py-1.5"
       trigger={({ toggle, triggerProps }) => (
         <button
           type="button"
@@ -90,7 +90,7 @@ export function Select<T extends string>({
                     o.value === value ? "font-semibold text-ink-900" : "text-ink-700",
                   )}
                 >
-                  <span className="flex h-4 w-4 items-center justify-center text-brand-500">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center text-brand-500">
                     {o.value === value && <Check size={16} strokeWidth={2.5} />}
                   </span>
                   <span className="truncate">{o.label}</span>
