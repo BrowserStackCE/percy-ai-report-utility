@@ -5,6 +5,7 @@ import SidebarToggle from "./SidebarToggle";
 import { FileText, Folder } from "../ui/Icons";
 import { useProjects } from "../../api/projects/useProjects";
 import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
+import { projectsForProduct, useProduct, type Product } from "../../api/projects/ProductProvider";
 import { Select } from "../ui/Select";
 import { Eyebrow } from "../ui/Card";
 import { cn } from "../ui/cn";
@@ -44,10 +45,20 @@ function SidebarNavItem({ to, icon, label, end, tag }: NavItemProps) {
 /** Navigation panel. Holds the hamburger and brand at the top; open and closed state comes from the sidebar context. */
 export default function Sidebar() {
   const { collapsed } = useSidebar();
-  const { projects: loaded } = useProjects();
+  const { projects: loaded, scope } = useProjects();
   const { projectId: project, setProjectId: setProject } = useSelectedProject();
+  const { product: chosen, setProduct } = useProduct();
   const navigate = useNavigate();
-  const projects = loaded.map((p) => ({ value: p.id, label: p.name }));
+  // A single-kind token only ever sees one product, so there is nothing to switch between.
+  const product: Product = scope === "web" || scope === "app" ? scope : chosen;
+  const projects = projectsForProduct(loaded, product).map((p) => ({ value: p.id, label: p.name }));
+
+  function pickProduct(next: Product) {
+    setProduct(next);
+    // The open project may belong to the other product; clear it rather than show a mismatched one.
+    const current = loaded.find((p) => p.id === project);
+    if (current && current.kind !== "unknown" && current.kind !== next) setProject("");
+  }
 
   return (
     <aside
@@ -71,7 +82,25 @@ export default function Sidebar() {
 
       {/* The project picker needs room, so it is hidden in the collapsed rail. */}
       <div className={cn("border-t border-line p-4", collapsed && "hidden")}>
-        <Eyebrow>Project</Eyebrow>
+        {scope === "both" && (
+          <div role="group" aria-label="Product" className="mb-3 flex w-56 rounded-lg border border-line-strong bg-card p-0.5">
+            {(["web", "app"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={product === p}
+                onClick={() => pickProduct(p)}
+                className={cn(
+                  "h-8 flex-1 rounded-md text-sm font-medium transition-colors",
+                  product === p ? "bg-brand-50 text-brand-700" : "text-ink-700 hover:bg-chip",
+                )}
+              >
+                {p === "web" ? "Web" : "App"}
+              </button>
+            ))}
+          </div>
+        )}
+        <Eyebrow>{product === "web" ? "Web project" : "App project"}</Eyebrow>
         <div className="mt-2 w-56">
           <Select
             value={project}
@@ -81,7 +110,7 @@ export default function Sidebar() {
               navigate("/");
             }}
             ariaLabel="Project"
-            placeholder="Select project"
+            placeholder={`Select ${product} project`}
             searchable
             searchPlaceholder="Search projects"
           />

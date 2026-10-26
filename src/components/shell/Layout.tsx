@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router";
 import Breadcrumb from "./Breadcrumb";
+import HotReloadButton from "./HotReloadButton";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import TimeZonePicker from "./TimeZonePicker";
@@ -23,6 +24,7 @@ export default function Layout() {
                 <Breadcrumb />
               </div>
               <div className="flex shrink-0 items-center gap-3 rounded-xl border border-line bg-card px-4">
+                <HotReloadButton />
                 <TimeZonePicker />
                 <ThemeToggle />
               </div>

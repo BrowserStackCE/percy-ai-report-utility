@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
+import { cacheOwner, clearProjectsCache, readProjectsCache, writeProjectsCache } from "./cache";
 import { listProjects } from "./projectsApi";
 import { projectsForScope, scopeOfCredentials, type CredentialScope } from "./scope";
 import type { Project } from "./types";
@@ -12,7 +13,14 @@ export type ProjectsState =
   | { status: "error"; projects: Project[]; error: ApiError };
 
 export type ProjectsContextValue = ProjectsState & {
+  /** Retry after an error. Uses the cache when it has the list. */
   reload: () => void;
+  /** Throw the cached list away and ask Percy again ("Hot reload"). */
+  hotReload: () => void;
+  /** When the projects were last fetched from Percy, or null before the first fetch. */
+  fetchedAt: number | null;
+  /** True when the list on screen came from the browser cache rather than a fresh request. */
+  fromCache: boolean;
   /** Product family the credentials can read; the Projects page hides the type filter for a single-kind token. */
   scope: CredentialScope;
 };
@@ -20,16 +28,25 @@ export type ProjectsContextValue = ProjectsState & {
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
 
 /**
- * Loads every project the stored credentials can access, once, and shares the result with the
- * whole app (sidebar picker and Projects page) so navigating never triggers a second request.
- * Reloads when the credentials change or `reload()` is called.
+ * Loads every project the stored credentials can access and shares the result with the whole app
+ * (sidebar picker and Projects page). The list is cached in the browser, so reloading the page or
+ * coming back later does not call Percy again; "Hot reload" clears the cache and fetches fresh data.
+ * Only projects are cached. Builds, snapshots and everything else always hit the API.
  */
 export function ProjectsProvider({ children }: { children: ReactNode }) {
   const { credentials } = useAuth();
   const [state, setState] = useState<ProjectsState>({ status: "loading", projects: [], error: null });
+  const [meta, setMeta] = useState<{ fetchedAt: number | null; fromCache: boolean }>({ fetchedAt: null, fromCache: false });
   const [nonce, setNonce] = useState(0);
+  /** Set by hotReload so the next load skips the cache even though it is still on disk. */
+  const bypassCache = useRef(false);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const hotReload = useCallback(() => {
+    clearProjectsCache();
+    bypassCache.current = true;
+    setNonce((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const auth = authFromCredentials(credentials);
@@ -44,12 +61,28 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const scope = scopeOfCredentials(credentials);
+    const owner = cacheOwner(credentials);
+
+    if (!bypassCache.current) {
+      const cached = readProjectsCache(owner);
+      if (cached) {
+        setState({ status: "ready", projects: projectsForScope(cached.projects, scope), error: null });
+        setMeta({ fetchedAt: cached.savedAt || null, fromCache: true });
+        return;
+      }
+    }
+    bypassCache.current = false;
+
     const controller = new AbortController();
     setState((prev) => ({ status: "loading", projects: prev.projects, error: null }));
 
-    const scope = scopeOfCredentials(credentials);
     listProjects({ auth, signal: controller.signal })
-      .then((projects) => setState({ status: "ready", projects: projectsForScope(projects, scope), error: null }))
+      .then((projects) => {
+        writeProjectsCache(owner, projects);
+        setState({ status: "ready", projects: projectsForScope(projects, scope), error: null });
+        setMeta({ fetchedAt: Date.now(), fromCache: false });
+      })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         const error = isApiError(err) ? err : new ApiError("unexpected", "Something went wrong while loading projects.");
@@ -60,7 +93,10 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   }, [credentials, nonce]);
 
   const scope = useMemo(() => scopeOfCredentials(credentials), [credentials]);
-  const value = useMemo<ProjectsContextValue>(() => ({ ...state, reload, scope }), [state, reload, scope]);
+  const value = useMemo<ProjectsContextValue>(
+    () => ({ ...state, reload, hotReload, fetchedAt: meta.fetchedAt, fromCache: meta.fromCache, scope }),
+    [state, reload, hotReload, meta, scope],
+  );
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>;
 }
 

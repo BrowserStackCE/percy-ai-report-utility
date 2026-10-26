@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { isRetryable } from "../api/errors";
 import { useProjects } from "../api/projects/useProjects";
 import { useSelectedProject } from "../api/projects/SelectedProjectProvider";
+import { projectsForProduct, useProduct } from "../api/projects/ProductProvider";
 import type { Project } from "../api/projects/types";
 import { useDateFormat } from "../lib/dateFormat";
 import {
@@ -14,39 +15,17 @@ import {
   PageHeader,
   Pagination,
   Search,
-  Select,
   StatusPill,
   TableSkeleton,
   Truncate,
   buttonClass,
 } from "../components/ui";
 
-type KindFilter = "all" | "web" | "app";
-
-const kindOptions = [
-  { value: "all" as const, label: "All types" },
-  { value: "web" as const, label: "Web" },
-  { value: "app" as const, label: "App" },
-];
-
 /** Projects shown per page. Percy returns every project the credentials can see, so paging is done here. */
 const PAGE_SIZE = 20;
 
-/** Properly laid-out search box: icon, full-width input, and the type filter as a separate control. */
-function ProjectSearch({
-  query,
-  onQuery,
-  kind,
-  onKind,
-  showKind,
-}: {
-  query: string;
-  onQuery: (v: string) => void;
-  kind: KindFilter;
-  onKind: (v: KindFilter) => void;
-  /** False when the credentials only see one product family, so a type filter would do nothing. */
-  showKind: boolean;
-}) {
+/** Properly laid-out search box: icon and full-width input. */
+function ProjectSearch({ query, onQuery }: { query: string; onQuery: (v: string) => void }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <label className="relative min-w-64 flex-1">
@@ -62,11 +41,6 @@ function ProjectSearch({
           className="h-11 w-full rounded-lg border border-line-strong bg-card pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
-      {showKind && (
-        <div className="w-44">
-          <Select value={kind} options={kindOptions} onChange={onKind} ariaLabel="Project type" />
-        </div>
-      )}
     </div>
   );
 }
@@ -92,7 +66,7 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
           <Truncate className="mt-0.5 text-sm text-ink-500">{project.fullSlug}</Truncate>
         </button>
       </td>
-      <td className="hidden px-4 py-5 text-sm text-ink-700 2xl:table-cell">{project.organization?.name ?? "—"}</td>
+      <td className="whitespace-nowrap px-4 py-5 text-sm text-ink-500">{formatDate(project.createdAt)}</td>
       <td className="px-4 py-5">
         <div className="flex items-center gap-2">
           <Chip>{project.type}</Chip>
@@ -117,22 +91,22 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
 export default function Projects() {
   const { status, projects, error, reload, scope } = useProjects();
   const { projectId, setProjectId } = useSelectedProject();
+  const { product: chosen } = useProduct();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<KindFilter>("all");
   const [page, setPage] = useState(1);
+  // Follows the Web / App switch in the sidebar, the same list the project picker offers.
+  const product = scope === "web" || scope === "app" ? scope : chosen;
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return projects.filter(
-      (p) =>
-        (kind === "all" || p.kind === kind) &&
-        (q === "" || p.name.toLowerCase().includes(q) || p.fullSlug.toLowerCase().includes(q)),
+    return projectsForProduct(projects, product).filter(
+      (p) => q === "" || p.name.toLowerCase().includes(q) || p.fullSlug.toLowerCase().includes(q),
     );
-  }, [projects, query, kind]);
+  }, [projects, query, product]);
 
-  // A new search or filter always starts again from the first page.
-  useEffect(() => setPage(1), [query, kind]);
+  // A new search or product always starts again from the first page.
+  useEffect(() => setPage(1), [query, product]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
@@ -151,7 +125,7 @@ export default function Projects() {
         title="Projects"
         description={
           scope === "both"
-            ? "Pick a project to see its recent builds."
+            ? `Showing ${product} projects. Switch between Web and App in the sidebar. Pick a project to see its recent builds.`
             : `Showing ${scope} projects, the only kind your Percy token can read. Pick one to see its recent builds.`
         }
       />
@@ -172,7 +146,7 @@ export default function Projects() {
 
       {!error && (
         <>
-          <ProjectSearch query={query} onQuery={setQuery} kind={kind} onKind={setKind} showKind={scope === "both"} />
+          <ProjectSearch query={query} onQuery={setQuery} />
 
           {status === "loading" && projects.length === 0 ? (
             <LoadingOverlay label="Loading projects">
@@ -183,11 +157,11 @@ export default function Projects() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-line">
-                    {["Project", "Organization", "Type", "Base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
+                    {["Project", "Created", "Type", "Base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
                       <th
                         key={h}
                         scope="col"
-                        className={`whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6 ${i === 0 ? "w-[15rem]" : ""} ${i === 1 ? "hidden 2xl:table-cell" : ""} ${i >= 4 ? "text-right" : ""}`}
+                        className={`whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6 ${i === 0 ? "w-[15rem]" : ""} ${i >= 4 ? "text-right" : ""}`}
                       >
                         {h}
                       </th>
@@ -201,7 +175,11 @@ export default function Projects() {
                   {visible.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center text-sm text-ink-400">
-                        {projects.length === 0 ? "No projects found for these credentials." : "No projects match your search."}
+                        {projects.length === 0
+                          ? "No projects found for these credentials."
+                          : query.trim() === ""
+                            ? `No ${product} projects found.`
+                            : "No projects match your search."}
                       </td>
                     </tr>
                   )}
