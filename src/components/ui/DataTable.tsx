@@ -9,7 +9,7 @@ export interface Column<T> {
   info?: string;
   render: (row: T) => ReactNode;
   className?: string;
-  align?: "left" | "right";
+  align?: "left" | "center" | "right";
 }
 
 interface DataTableProps<T> {
@@ -33,10 +33,17 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                 className={cn(
                   "whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6",
                   c.align === "right" && "text-right",
+                  c.align === "center" && "text-center",
                   c.className,
                 )}
               >
-                <span className={cn("inline-flex items-center gap-1.5", c.align === "right" && "justify-end")}>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5",
+                    c.align === "right" && "justify-end",
+                    c.align === "center" && "justify-center",
+                  )}
+                >
                   {c.header}
                   {c.info && <InfoTip title={c.header} align={c.align === "right" ? "right" : "left"}>{c.info}</InfoTip>}
                 </span>
@@ -48,7 +55,15 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
           {rows.map((row) => (
             <tr key={rowKey(row)} className="align-top transition-colors hover:bg-page/60">
               {columns.map((c) => (
-                <td key={c.key} className={cn("px-4 py-5 first:pl-6 last:pr-6", c.align === "right" && "text-right", c.className)}>
+                <td
+                  key={c.key}
+                  className={cn(
+                    "px-4 py-5 first:pl-6 last:pr-6",
+                    c.align === "right" && "text-right",
+                    c.align === "center" && "text-center",
+                    c.className,
+                  )}
+                >
                   {c.render(row)}
                 </td>
               ))}

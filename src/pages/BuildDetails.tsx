@@ -32,16 +32,30 @@ type ReportTab = "overview" | "snapshots" | "details";
 
 type Row = [string, ReactNode];
 
-/** Label / value rows used inside the detail widgets. Rows whose value is empty are hidden. */
-function Facts({ rows, keepEmpty = false }: { rows: Row[]; keepEmpty?: boolean }) {
-  const shown = keepEmpty ? rows : rows.filter(([, v]) => v !== null && v !== undefined && v !== "" && v !== "—");
-  if (shown.length === 0) return <p className="text-sm text-ink-400">Nothing reported for this build.</p>;
+/** True when Percy sent nothing for the field: null, undefined, an empty string or the "—" placeholder. */
+const isMissing = (v: ReactNode) => v === null || v === undefined || v === "" || v === "—";
+
+/**
+ * Label / value rows used inside the detail widgets. Every row is shown so it is clear which fields
+ * Percy did not send: those read "Not provided" in a muted style and are listed after the ones with data.
+ */
+function Facts({ rows }: { rows: Row[] }) {
+  const present = rows.filter(([, v]) => !isMissing(v));
+  const missing = rows.filter(([, v]) => isMissing(v));
   return (
     <dl className="grid grid-cols-[minmax(0,11rem)_1fr] gap-x-4 gap-y-2.5 text-sm">
-      {shown.map(([label, value]) => (
+      {present.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-ink-500">{label}</dt>
-          <dd className="min-w-0 break-words text-ink-900">{value ?? "—"}</dd>
+          <dd className="min-w-0 break-words text-ink-900">{value}</dd>
+        </div>
+      ))}
+      {missing.map(([label]) => (
+        <div key={label} className="contents">
+          <dt className="text-ink-400">{label}</dt>
+          <dd className="min-w-0 italic text-ink-400" title="Percy did not return this field for the build">
+            Not provided
+          </dd>
         </div>
       ))}
     </dl>
@@ -149,6 +163,35 @@ function DetailsSkeleton() {
       </LoadingOverlay>
     </PageContainer>
   );
+}
+
+/**
+ * Overview fields that depend on data Percy only sometimes sends. The card lists only the ones that
+ * came back empty for this build, as "Not provided", so missing data is visible rather than silent.
+ */
+function missingOverviewFields(b: Build): Row[] {
+  const rows: Row[] = [
+    ["Build number", b.buildNumber !== null ? `#${b.buildNumber}` : null],
+    ["Project", b.projectName],
+    ["Branch", b.branch],
+    ["Commit", b.commit?.sha ? shortSha(b.commit.sha) : null],
+    ["Commit author", b.commit?.author ?? null],
+    ["Review state", b.reviewState ? humanize(b.reviewState) : null],
+    ["Review reason", b.reviewStateReason ? humanize(b.reviewStateReason) : null],
+    ["Total snapshots", b.totalSnapshots !== null ? count(b.totalSnapshots) : null],
+    ["Total comparisons", b.totalComparisons !== null ? count(b.totalComparisons) : null],
+    ["Comparisons with diffs", b.comparisonsWithDiffs !== null ? count(b.comparisonsWithDiffs) : null],
+    ["Unreviewed snapshots", b.unreviewedSnapshots !== null ? count(b.unreviewedSnapshots) : null],
+    ["Failed snapshots", b.failedSnapshots !== null ? count(b.failedSnapshots) : null],
+    ["Open comments", b.openComments !== null ? count(b.openComments) : null],
+    ["Open issues", b.openIssues !== null ? count(b.openIssues) : null],
+    ["Percy processing time", b.processingSeconds !== null ? formatDuration(b.processingSeconds) : null],
+    ["Percy AI results", b.ai ? "Available" : null],
+    ["Test cases", b.testCases !== null ? count(b.testCases) : null],
+    ["Figma design", b.figma ? "Linked" : null],
+    ["Percy link", b.percyUrl],
+  ];
+  return rows.filter(([, v]) => isMissing(v));
 }
 
 function aiSegments(b: Build): Segment[] {
@@ -277,6 +320,15 @@ export default function BuildDetails() {
       </div>
 
       <SnapshotSummary state={allSnapshots} buildTotal={b.totalSnapshots} buildId={b.id} />
+
+      {missingOverviewFields(b).length > 0 && (
+        <Widget
+          title="Fields Percy did not return"
+          info="Fields this page can show but that Percy sent empty for this build. They are listed here so it is clear the data is missing, not hidden."
+        >
+          <Facts rows={missingOverviewFields(b)} />
+        </Widget>
+      )}
       </LazyTab>
 
       <LazyTab id="snapshots" active={tab === "snapshots"} label="Loading snapshots">
@@ -391,7 +443,6 @@ export default function BuildDetails() {
               <StackedBar segments={aiSegments(b)} />
               <div className="mt-4">
                 <Facts
-                  keepEmpty
                   rows={[
                     ["Potential bugs", count(ai.potentialBugs)],
                     ["AI visual diffs", count(ai.aiVisualDiffs)],
@@ -425,7 +476,6 @@ export default function BuildDetails() {
           info="A comparison is one snapshot rendered in one browser at one width and checked against the base build. This breaks down how many finished, how many differ, and how many SmartSnap skipped."
         >
           <Facts
-            keepEmpty
             rows={[
               ["Total comparisons", count(b.totalComparisons)],
               ["Finished", count(b.comparisonsFinished)],
@@ -445,7 +495,6 @@ export default function BuildDetails() {
             info="Test cases reported by BrowserStack Test Observability (TestHub) for this build, with how many still need review or failed."
           >
             <Facts
-              keepEmpty
               rows={[
                 ["Total", count(b.testCases)],
                 ["Unreviewed", count(b.testCasesUnreviewed)],
@@ -461,7 +510,6 @@ export default function BuildDetails() {
           info="How this build was produced: the Percy client that uploaded it, whether it was split across parallel shards, and its build type."
         >
           <Facts
-            keepEmpty
             rows={[
               ["Parallel nonce", b.parallelNonce],
               ["Parallel shards", b.parallelShards],

@@ -69,40 +69,54 @@ const buildColumns = (formatDateTime: (iso: string | null) => string): Column<Bu
     key: "branch",
     header: "Branch / commit",
     info: "The git branch the build ran on, plus the commit hash and message when Percy has them. Pull-request builds also show the PR number and title.",
-    render: (b) => (
-      <div className="max-w-[14rem] min-w-0">
-        {b.branch ? (
-          <Chip>
-            <Truncate>{b.branch}</Truncate>
-          </Chip>
-        ) : (
-          <span className="text-ink-400">—</span>
-        )}
-        {b.commit?.sha && (
-          <p className="mt-1 truncate text-xs text-ink-500">
-            <span className="font-mono">{shortSha(b.commit.sha)}</span>
-            {b.commit.message ? ` · ${b.commit.message.split("\n")[0]}` : ""}
-          </p>
-        )}
-        {b.isPullRequest && (
-          <p className="mt-1 truncate text-xs text-ink-500">
-            PR #{b.pullRequestNumber ?? "?"} {b.pullRequestTitle ?? ""}
-          </p>
-        )}
-      </div>
-    ),
+    className: "w-[16rem] max-w-[16rem]",
+    render: (b) => {
+      // Long commit messages and PR titles stay on one line with an ellipsis; the full text is the tooltip.
+      const subject = b.commit?.message?.split("\n")[0] ?? "";
+      const pr = b.isPullRequest ? `PR #${b.pullRequestNumber ?? "?"} ${b.pullRequestTitle ?? ""}`.trim() : "";
+      return (
+        <div className="min-w-0">
+          {b.branch ? (
+            <span className="flex min-w-0">
+              <Chip>
+                <span className="max-w-[13rem] truncate" title={b.branch}>
+                  {b.branch}
+                </span>
+              </Chip>
+            </span>
+          ) : (
+            <span className="text-ink-400">—</span>
+          )}
+          {b.commit?.sha && (
+            <p
+              className="mt-1.5 flex min-w-0 items-baseline gap-1.5 text-xs text-ink-500"
+              title={subject ? `${b.commit.sha}\n${b.commit.message ?? ""}` : b.commit.sha}
+            >
+              <span className="shrink-0 font-mono text-ink-700">{shortSha(b.commit.sha)}</span>
+              {subject && <span className="min-w-0 truncate">{subject}</span>}
+            </p>
+          )}
+          {pr && <Truncate className="mt-1 text-xs text-ink-500">{pr}</Truncate>}
+        </div>
+      );
+    },
   },
   {
     key: "snapshots",
     header: "Snapshots",
     info: "Total snapshots in the build. Underneath: how many comparisons showed a visual difference from the base build, and how many snapshots are still unreviewed.",
-    align: "right",
+    align: "center",
     render: (b) => (
-      <div className="text-sm tabular-nums text-ink-700">
-        <span className="font-medium text-ink-900">{count(b.totalSnapshots)}</span>
-        <p className="mt-0.5 text-xs text-ink-500">
-          {count(b.comparisonsWithDiffs)} with diffs · {count(b.unreviewedSnapshots)} unreviewed
-        </p>
+      <div className="flex flex-col items-center gap-2">
+        <span className="text-base font-semibold tabular-nums text-ink-900">{count(b.totalSnapshots)}</span>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          <StatusPill tone={(b.comparisonsWithDiffs ?? 0) > 0 ? "danger" : "neutral"}>
+            {count(b.comparisonsWithDiffs)} with diffs
+          </StatusPill>
+          <StatusPill tone={(b.unreviewedSnapshots ?? 0) > 0 ? "warn" : "mint"}>
+            {count(b.unreviewedSnapshots)} unreviewed
+          </StatusPill>
+        </div>
       </div>
     ),
   },

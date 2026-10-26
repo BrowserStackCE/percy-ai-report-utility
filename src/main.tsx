@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router/dom";
 import { router } from "./router";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProjectsProvider } from "./api/projects/ProjectsProvider";
+import { ProductProvider } from "./api/projects/ProductProvider";
 import { SelectedProjectProvider } from "./api/projects/SelectedProjectProvider";
 import { DateFormatProvider } from "./lib/dateFormat";
 import { ThemeProvider } from "./lib/theme";
@@ -14,11 +15,13 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <AuthProvider>
         <ProjectsProvider>
-          <SelectedProjectProvider>
-            <DateFormatProvider>
-              <RouterProvider router={router} />
-            </DateFormatProvider>
-          </SelectedProjectProvider>
+          <ProductProvider>
+            <SelectedProjectProvider>
+              <DateFormatProvider>
+                <RouterProvider router={router} />
+              </DateFormatProvider>
+            </SelectedProjectProvider>
+          </ProductProvider>
         </ProjectsProvider>
       </AuthProvider>
     </ThemeProvider>
