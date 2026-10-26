@@ -12,7 +12,7 @@ interface Crumb {
 }
 
 /** Builds the trail for the current route. The last crumb is the current page and is not a link. */
-function useCrumbs(buildId: string | undefined): Crumb[] {
+function useCrumbs(buildId: string | undefined, snapshotId?: string): Crumb[] {
   const { pathname } = useLocation();
   const { projectId } = useSelectedProject();
   const { projects } = useProjects();
@@ -24,6 +24,7 @@ function useCrumbs(buildId: string | undefined): Crumb[] {
 
   if (buildId) {
     const label = build?.buildNumber != null ? `Build #${build.buildNumber}` : `Build ${buildId}`;
+    if (snapshotId) return [projectsCrumb, buildsCrumb, { label, to: `/reports/${buildId}` }, { label: `Snapshot ${snapshotId}` }];
     return [projectsCrumb, buildsCrumb, { label }];
   }
   if (pathname === "/") return [projectsCrumb, { label: projectName ?? "Reports" }];
@@ -34,8 +35,10 @@ function useCrumbs(buildId: string | undefined): Crumb[] {
 
 /** Breadcrumb bar shown on every page, in its own card above the page content. */
 export default function Breadcrumb() {
-  const match = useMatch("/reports/:buildId");
-  const crumbs = useCrumbs(match?.params.buildId);
+  const snapshotMatch = useMatch("/reports/:buildId/snapshots/:snapshotId");
+  const buildMatch = useMatch("/reports/:buildId");
+  const match = snapshotMatch ?? buildMatch;
+  const crumbs = useCrumbs(match?.params.buildId, snapshotMatch?.params.snapshotId);
   return (
     <nav aria-label="Breadcrumb" className="shrink-0 rounded-xl border border-line bg-card px-6 py-3">
       <ol className="flex min-w-0 items-center gap-2 text-sm">

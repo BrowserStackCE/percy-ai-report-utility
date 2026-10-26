@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import Layout from "./components/shell/Layout";
 import Home from "./pages/Home";
 import BuildDetails from "./pages/BuildDetails";
+import SnapshotReport from "./pages/SnapshotReport";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Projects from "./pages/Projects";
@@ -16,6 +17,8 @@ export const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       // One build with all of its details.
       { path: "/reports/:buildId", element: <BuildDetails /> },
+      // One snapshot of that build, with its comparison-level metrics.
+      { path: "/reports/:buildId/snapshots/:snapshotId", element: <SnapshotReport /> },
       { path: "/projects", element: <Projects /> },
       { path: "/login", element: <Login /> },
       { path: "/auth/callback", element: <AuthCallback /> },
