@@ -3,6 +3,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
 import { listProjects } from "./projectsApi";
+import { projectsForScope, scopeOfCredentials, type CredentialScope } from "./scope";
 import type { Project } from "./types";
 
 export type ProjectsState =
@@ -10,7 +11,11 @@ export type ProjectsState =
   | { status: "ready"; projects: Project[]; error: null }
   | { status: "error"; projects: Project[]; error: ApiError };
 
-export type ProjectsContextValue = ProjectsState & { reload: () => void };
+export type ProjectsContextValue = ProjectsState & {
+  reload: () => void;
+  /** Product family the credentials can read; the Projects page hides the type filter for a single-kind token. */
+  scope: CredentialScope;
+};
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
 
@@ -42,8 +47,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     setState((prev) => ({ status: "loading", projects: prev.projects, error: null }));
 
+    const scope = scopeOfCredentials(credentials);
     listProjects({ auth, signal: controller.signal })
-      .then((projects) => setState({ status: "ready", projects, error: null }))
+      .then((projects) => setState({ status: "ready", projects: projectsForScope(projects, scope), error: null }))
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         const error = isApiError(err) ? err : new ApiError("unexpected", "Something went wrong while loading projects.");
@@ -53,7 +59,8 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [credentials, nonce]);
 
-  const value = useMemo<ProjectsContextValue>(() => ({ ...state, reload }), [state, reload]);
+  const scope = useMemo(() => scopeOfCredentials(credentials), [credentials]);
+  const value = useMemo<ProjectsContextValue>(() => ({ ...state, reload, scope }), [state, reload, scope]);
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>;
 }
 

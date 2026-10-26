@@ -16,6 +16,7 @@ export { FilterPanel, FilterSection } from "./FilterSection";
 export { ImagePlaceholder, EmptyState } from "./Feedback";
 export { Widget, BigNumber, StackedBar, LegendRows, InlineAction, type Segment } from "./Widget";
 export { Tabs, type TabItem } from "./Tabs";
+export { TabBar, type TabBarItem } from "./TabBar";
 export { BarChart, type BarGroup } from "./BarChart";
 export { Drawer } from "./Drawer";
 export { PageContainer } from "./PageContainer";

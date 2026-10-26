@@ -105,6 +105,20 @@ body {
   animation: page-in var(--duration-ui) var(--ease-out-soft) both;
 }
 
+/* Tab panel entrance: a short fade and rise so switching tabs never snaps. */
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tab-enter {
+  animation: tab-in var(--duration-ui) var(--ease-out-soft) both;
+}
+
+/* Cards and rows that appear as data arrives. */
+.fade-in {
+  animation: page-in var(--duration-ui) var(--ease-out-soft) both;
+}
+
 /* Popover entrance: opacity plus a tiny settle, anchored so nothing reflows. */
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }
@@ -142,7 +156,7 @@ body {
 .logo-dot { animation: logo-dots 1.2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-enter, .pop-in, .skeleton, .logo-breathe, .logo-ring, .logo-dot { animation: none; }
+  .page-enter, .tab-enter, .fade-in, .pop-in, .skeleton, .logo-breathe, .logo-ring, .logo-dot { animation: none; }
 }
 
 :focus-visible {

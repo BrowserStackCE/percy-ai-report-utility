@@ -27,8 +27,8 @@ export function authFromCredentials(c: StoredCredentials): Auth | null {
 
 export interface RequestOptions {
   auth: Auth;
-  /** Query string values; undefined entries are skipped. */
-  query?: Record<string, string | number | undefined>;
+  /** Query string values; undefined entries are skipped and arrays repeat the key once per item. */
+  query?: Record<string, string | number | Array<string | number> | undefined>;
   signal?: AbortSignal;
   timeoutMs?: number;
 }
@@ -36,7 +36,8 @@ export interface RequestOptions {
 function buildUrl(path: string, query: RequestOptions["query"]): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined) params.set(key, String(value));
+    if (Array.isArray(value)) value.forEach((v) => params.append(key, String(v)));
+    else if (value !== undefined) params.set(key, String(value));
   }
   const qs = params.toString();
   return `${API_BASE}${path}${qs ? `?${qs}` : ""}`;
