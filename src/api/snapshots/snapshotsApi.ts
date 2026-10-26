@@ -1,6 +1,6 @@
 import { percyGet, type Auth } from "../http";
-import { SNAPSHOTS_PAGE_SIZE, parseSnapshotsResponse } from "./mapper";
-import type { SnapshotFilters, SnapshotsPage } from "./types";
+import { SNAPSHOTS_PAGE_SIZE, parseSnapshotResponse, parseSnapshotsResponse } from "./mapper";
+import type { Snapshot, SnapshotFilters, SnapshotsPage } from "./types";
 
 export interface ListSnapshotsOptions {
   auth: Auth;
@@ -27,4 +27,10 @@ export async function fetchSnapshotsPage({ auth, buildId, cursor, filters, signa
     },
   });
   return parseSnapshotsResponse(json);
+}
+
+/** Fetch one snapshot with its comparisons, screenshots and device tags (GET /snapshots/:id). */
+export async function fetchSnapshot(snapshotId: string, { auth, signal }: { auth: Auth; signal?: AbortSignal }): Promise<Snapshot> {
+  const json = await percyGet(`/snapshots/${encodeURIComponent(snapshotId)}`, { auth, signal });
+  return parseSnapshotResponse(json);
 }
