@@ -265,7 +265,15 @@ export function SnapshotSummary({
                     {t.imageUrl && <img src={t.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover object-top" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink-900" title={t.name}>{t.name}</p>
+                    <p className="truncate text-sm font-medium text-ink-900" title={t.name}>
+                      <Link
+                        to={`/reports/${buildId}/snapshots/${t.snapshotId}`}
+                        className="hover:text-brand-600 hover:underline"
+                        aria-label={`Open the report for ${t.name}`}
+                      >
+                        {t.name}
+                      </Link>
+                    </p>
                     {t.device && <p className="truncate text-xs text-ink-500">{t.device}</p>}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
