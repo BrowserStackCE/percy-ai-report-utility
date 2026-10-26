@@ -1,16 +1,20 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { isRetryable } from "../api/errors";
 import { useBuild } from "../api/builds/useBuild";
-import type { Build, BuildState } from "../api/builds/types";
+import type { Build } from "../api/builds/types";
 import { count, formatDuration, humanize, shortSha } from "../lib/format";
 import { useDateFormat } from "../lib/dateFormat";
+import { SnapshotsSection } from "../components/snapshots/SnapshotsSection";
+import { SnapshotSummary } from "../components/snapshots/SnapshotSummary";
+import { ReportHeader } from "../components/report/ReportHeader";
+import { useAllSnapshots } from "../api/snapshots/useAllSnapshots";
 import {
+  ArrowLeft,
   Button,
   Card,
   CardSkeleton,
   Chip,
-  External,
   LoadingOverlay,
   PageContainer,
   PageHeader,
@@ -18,26 +22,13 @@ import {
   SkeletonLines,
   StackedBar,
   StatCard,
-  StatusPill,
+  TabBar,
   Widget,
   buttonClass,
   type Segment,
 } from "../components/ui";
 
-const stateTone: Record<BuildState, "mint" | "warn" | "danger" | "neutral"> = {
-  finished: "mint",
-  processing: "warn",
-  waiting: "warn",
-  failed: "danger",
-  unknown: "neutral",
-};
-
-const reviewTone: Record<string, "mint" | "warn" | "danger" | "neutral"> = {
-  approved: "mint",
-  unreviewed: "warn",
-  changes_requested: "danger",
-  rejected: "danger",
-};
+type ReportTab = "overview" | "snapshots" | "details";
 
 type Row = [string, ReactNode];
 
@@ -68,9 +59,67 @@ function ExternalLink({ href, children }: { href: string | null; children: React
   );
 }
 
-/** Small coloured tag for boolean build flags. */
-function Flag({ on, label }: { on: boolean; label: string }) {
-  return on ? <Chip>{label}</Chip> : null;
+/** Delay before a tab's content mounts, so switching always shows the shimmer and then fades in. */
+const TAB_SHIMMER_MS = 450;
+
+/** Shimmer shown in a tab while its content is being prepared. */
+function TabSkeleton({ label }: { label: string }) {
+  return (
+    <LoadingOverlay label={label} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <CardSkeleton key={i}>
+            <Skeleton className="h-4 w-32" />
+            <SkeletonLines lines={4} className="mt-5" />
+          </CardSkeleton>
+        ))}
+      </div>
+    </LoadingOverlay>
+  );
+}
+
+/**
+ * Mounts a tab's content only after the tab has been opened, behind a short shimmer, and keeps it
+ * mounted afterwards so going back to a visited tab is instant and loses no state.
+ */
+function LazyTab({
+  id,
+  active,
+  label,
+  children,
+  className,
+}: {
+  id: ReportTab;
+  active: boolean;
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!active || ready) return;
+    const t = window.setTimeout(() => setReady(true), TAB_SHIMMER_MS);
+    return () => window.clearTimeout(t);
+  }, [active, ready]);
+
+  // Never opened: render nothing, so the tab does no work (and fetches nothing) until it is chosen.
+  if (!active && !ready) return null;
+  return (
+    <div
+      role="tabpanel"
+      id={`panel-${id}`}
+      aria-labelledby={`tab-${id}`}
+      hidden={!active}
+      className={ready ? `tab-enter ${className ?? ""}` : undefined}
+    >
+      {ready ? children : <TabSkeleton label={label} />}
+    </div>
+  );
 }
 
 /** Placeholder with the same layout as the loaded page, so nothing jumps when data arrives. */
@@ -117,6 +166,9 @@ export default function BuildDetails() {
   const { buildId = "" } = useParams();
   const { status, build, error, reload } = useBuild(buildId);
   const { formatDateTime, option } = useDateFormat();
+  const [tab, setTab] = useState<ReportTab>("overview");
+  // Only the Overview needs every snapshot, so the walk starts when that tab is open and the build is loaded.
+  const allSnapshots = useAllSnapshots(build && tab === "overview" ? build.id : "");
 
   if (status === "loading") return <DetailsSkeleton />;
 
@@ -154,32 +206,31 @@ export default function BuildDetails() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={`Build ${b.buildNumber !== null ? `#${b.buildNumber}` : b.id}`}
-        backTo="/"
-        meta={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone={stateTone[b.state]}>{humanize(b.state)}</StatusPill>
-            {b.reviewState && <StatusPill tone={reviewTone[b.reviewState] ?? "neutral"}>{humanize(b.reviewState)}</StatusPill>}
-            {b.branch && <Chip>{b.branch}</Chip>}
-            {b.commit?.sha && <Chip mono>{shortSha(b.commit.sha)}</Chip>}
-            <Flag on={b.isLatestOnBranch} label="Latest on branch" />
-            <Flag on={b.partial} label="Partial" />
-            <Flag on={b.prodBuild} label="Production" />
-            <Flag on={b.designBuild} label="Design" />
-          </div>
-        }
-        description={[b.projectName, b.pullRequestTitle].filter(Boolean).join(" · ") || undefined}
-        actions={
-          b.percyUrl ? (
-            <a href={b.percyUrl} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
-              <External size={16} />
-              Open in Percy
-            </a>
-          ) : undefined
-        }
+      <div className="flex items-start gap-3">
+        <Link
+          to="/"
+          aria-label="Back"
+          className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-900 transition-colors hover:bg-chip"
+        >
+          <ArrowLeft size={22} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <ReportHeader build={b} />
+        </div>
+      </div>
+
+      <TabBar
+        ariaLabel="Report sections"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "overview", label: "Overview" },
+          { value: "snapshots", label: "Snapshots", count: b.totalSnapshots ?? undefined },
+          { value: "details", label: "Build details" },
+        ]}
       />
 
+      <LazyTab id="overview" active={tab === "overview"} label="Loading overview" className="space-y-6">
       {failed && (
         <Card className="border-red-200 p-5">
           <p role="alert" className="text-sm font-semibold text-red-600">This build failed: {humanize(b.failureReason)}</p>
@@ -225,7 +276,19 @@ export default function BuildDetails() {
         />
       </div>
 
-      <div className="gap-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+      <SnapshotSummary state={allSnapshots} buildTotal={b.totalSnapshots} buildId={b.id} />
+      </LazyTab>
+
+      <LazyTab id="snapshots" active={tab === "snapshots"} label="Loading snapshots">
+        <SnapshotsSection buildId={b.id} percyUrl={b.percyUrl} />
+      </LazyTab>
+
+      <LazyTab
+        id="details"
+        active={tab === "details"}
+        label="Loading build details"
+        className="gap-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid"
+      >
         <Widget title="Review progress" info="Snapshots reviewed vs still waiting for a decision.">
           <StackedBar segments={reviewSegments} />
           <ul className="mt-4 space-y-2 text-sm">
@@ -431,7 +494,7 @@ export default function BuildDetails() {
             />
           </Widget>
         )}
-      </div>
+      </LazyTab>
     </PageContainer>
   );
 }

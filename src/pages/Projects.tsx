@@ -38,11 +38,14 @@ function ProjectSearch({
   onQuery,
   kind,
   onKind,
+  showKind,
 }: {
   query: string;
   onQuery: (v: string) => void;
   kind: KindFilter;
   onKind: (v: KindFilter) => void;
+  /** False when the credentials only see one product family, so a type filter would do nothing. */
+  showKind: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -59,9 +62,11 @@ function ProjectSearch({
           className="h-11 w-full rounded-lg border border-line-strong bg-card pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
-      <div className="w-44">
-        <Select value={kind} options={kindOptions} onChange={onKind} ariaLabel="Project type" />
-      </div>
+      {showKind && (
+        <div className="w-44">
+          <Select value={kind} options={kindOptions} onChange={onKind} ariaLabel="Project type" />
+        </div>
+      )}
     </div>
   );
 }
@@ -110,7 +115,7 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
 }
 
 export default function Projects() {
-  const { status, projects, error, reload } = useProjects();
+  const { status, projects, error, reload, scope } = useProjects();
   const { projectId, setProjectId } = useSelectedProject();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -142,7 +147,14 @@ export default function Projects() {
 
   return (
     <PageContainer>
-      <PageHeader title="Projects" description="Pick a project to see its recent builds." />
+      <PageHeader
+        title="Projects"
+        description={
+          scope === "both"
+            ? "Pick a project to see its recent builds."
+            : `Showing ${scope} projects, the only kind your Percy token can read. Pick one to see its recent builds.`
+        }
+      />
 
       {error && (
         <Card className="p-5">
@@ -160,7 +172,7 @@ export default function Projects() {
 
       {!error && (
         <>
-          <ProjectSearch query={query} onQuery={setQuery} kind={kind} onKind={setKind} />
+          <ProjectSearch query={query} onQuery={setQuery} kind={kind} onKind={setKind} showKind={scope === "both"} />
 
           {status === "loading" && projects.length === 0 ? (
             <LoadingOverlay label="Loading projects">
