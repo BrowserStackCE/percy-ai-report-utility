@@ -82,7 +82,17 @@ function SnapshotRow({ s }: { s: Snapshot }) {
       </div>
       <div className="min-w-0">
         <p className="truncate font-semibold text-ink-900" title={s.displayName ?? s.name}>
-          {s.displayName ?? s.name}
+          {s.buildId ? (
+            <Link
+              to={`/reports/${s.buildId}/snapshots/${s.id}`}
+              className="hover:text-brand-600 hover:underline"
+              aria-label={`Open the report for ${s.displayName ?? s.name}`}
+            >
+              {s.displayName ?? s.name}
+            </Link>
+          ) : (
+            (s.displayName ?? s.name)
+          )}
         </p>
         {s.testCaseName && <p className="mt-0.5 truncate text-xs text-ink-500">{s.testCaseName}</p>}
         <div className="mt-1 flex flex-wrap gap-1.5">
