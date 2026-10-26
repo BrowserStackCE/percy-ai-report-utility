@@ -136,6 +136,20 @@ export function mapSnapshot(raw: RawSnapshot, included?: RawResource[]): Snapsho
   };
 }
 
+const BAD_SNAPSHOT = "Percy returned an unexpected response while loading the snapshot.";
+
+/**
+ * Validate and map a GET /snapshots/:id response, where `data` is one object rather than a list.
+ * Throws ApiError("invalid_response") on a wrong shape.
+ */
+export function parseSnapshotResponse(json: unknown): Snapshot {
+  if (!isObject(json) || !isObject(json.data)) throw new ApiError("invalid_response", BAD_SNAPSHOT);
+  const included = Array.isArray(json.included) ? (json.included as RawResource[]) : undefined;
+  const mapped = mapSnapshot(json.data as RawSnapshot, included);
+  if (!mapped) throw new ApiError("invalid_response", BAD_SNAPSHOT);
+  return mapped;
+}
+
 /** Validate and map a GET /snapshots response. Throws ApiError("invalid_response") on a wrong shape. */
 export function parseSnapshotsResponse(json: unknown): SnapshotsPage {
   if (!isObject(json) || !Array.isArray((json as unknown as RawSnapshotsResponse).data)) {
