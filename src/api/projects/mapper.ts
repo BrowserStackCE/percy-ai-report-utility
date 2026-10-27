@@ -5,6 +5,7 @@ import type {
   ProjectKind,
   ProjectsPage,
   RawIncluded,
+  RawOrganizationUsersResponse,
   RawProject,
   RawProjectsResponse,
 } from "./types";
@@ -35,7 +36,7 @@ function buildOrganizations(included: RawIncluded[] | undefined): Map<string, Or
     if (item.type !== "organizations") continue;
     const name = str(item.attributes?.name);
     const slug = str(item.attributes?.slug);
-    if (name || slug) map.set(item.id, { id: item.id, name: name ?? slug ?? item.id, slug: slug ?? "" });
+    if (name || slug) map.set(item.id, { id: item.id, name: name ?? slug ?? item.id, slug: slug ?? "", ownerName: null });
   }
   return map;
 }
@@ -78,6 +79,29 @@ export function mapProject(raw: RawProject, orgs: Map<string, Organization>): Pr
     organization: (orgId && orgs.get(orgId)) || null,
     percyUrl: `${PERCY_WEB}/${fullSlug}`,
   };
+}
+
+/**
+ * Name of the person who owns an organization, from GET /organizations/:slug/organization-users.
+ * Returns null when Percy lists no owner or does not name them, so the UI can show "Not provided".
+ */
+export function parseOrganizationOwner(json: unknown): string | null {
+  if (!isObject(json) || !Array.isArray(json.data)) {
+    throw new ApiError("invalid_response", "Percy returned an unexpected response while loading the organization's members.");
+  }
+  const body = json as unknown as RawOrganizationUsersResponse;
+  const users = new Map<string, string>();
+  for (const item of Array.isArray(body.included) ? body.included : []) {
+    const name = item.type === "users" ? str(item.attributes?.name) : null;
+    if (name) users.set(item.id, name);
+  }
+  for (const member of body.data ?? []) {
+    if (member.attributes?.owner !== true) continue;
+    const id = member.relationships?.user?.data?.id;
+    const name = id ? users.get(String(id)) : undefined;
+    if (name) return name;
+  }
+  return null;
 }
 
 /** Validate and map a GET /projects response. Throws ApiError("invalid_response") on a wrong shape. */

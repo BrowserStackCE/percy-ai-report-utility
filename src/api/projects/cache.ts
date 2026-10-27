@@ -7,7 +7,7 @@ import type { Project } from "./types";
  */
 const KEY = "percy_report_projects_cache";
 /** Bump when the Project shape changes so an old cache is ignored instead of misread. */
-const VERSION = 1;
+const VERSION = 2;
 
 interface CacheEntry {
   v: number;
