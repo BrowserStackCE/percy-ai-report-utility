@@ -1,7 +1,7 @@
 // Credential validation against the Percy API.
 // Docs: https://www.browserstack.com/docs/percy/api-reference/authentication
 
-// Override with PERCY_API_URL, e.g. the deployed proxy: https://percy-ai-report-utility.vercel.app/percy-api
+// Override with PERCY_API_URL, e.g. the deployed proxy: https://percy-ai-report.vercel.app/percy-api
 export const PERCY_API = (process.env.PERCY_API_URL || "https://percy.io/api/v1").replace(/\/+$/, "");
 export const RATE_LIMIT_PER_MINUTE = 400;
 

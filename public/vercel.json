@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/percy-api/:path*", "destination": "https://percy.io/api/v1/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
