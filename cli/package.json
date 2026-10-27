@@ -1,6 +1,6 @@
 {
   "name": "percy-report-utility",
-  "version": "0.2.0",
+  "version": "0.1.1",
   "description": "Authenticate with Percy / BrowserStack from the terminal and open the Percy AI Report site already signed in",
   "type": "module",
   "bin": {
