@@ -69,3 +69,10 @@ test("logout in CI prints the website sign-out link instead of opening a browser
   assert.match(r.stdout, /To also sign out of the website, open/);
   assert.ok(r.stdout.includes(`${reportUrl}/auth/logout`), `expected ${reportUrl}/auth/logout in:\n${r.stdout}`);
 });
+
+test("logout link uses the site URL from lib/config.js when PERCY_REPORT_URL is not set", async () => {
+  const { REPORT_SITE_URL } = await import("../lib/config.js");
+  const r = run(["logout"], { CI: "true" });
+  assert.equal(r.status, 0);
+  assert.ok(r.stdout.includes(`${REPORT_SITE_URL}/auth/logout`), `expected ${REPORT_SITE_URL}/auth/logout in:\n${r.stdout}`);
+});

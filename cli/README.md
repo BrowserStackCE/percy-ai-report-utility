@@ -61,7 +61,7 @@ Find a project token in your Percy project settings, and your username and acces
 - Credentials are validated against the Percy API (`Token` header for project tokens, HTTP Basic for BrowserStack credentials).
 - Valid credentials are saved to `~/.percy-report/credentials.json` (owner-only permissions).
 - The CLI prints and opens `<site>/auth/callback#d=...`. The credentials travel in the URL **fragment**, which browsers never send to a server. The site stores them in a cookie, clears the URL and shows you as authenticated. No backend is involved.
-- The site defaults to `http://localhost:5173`; set `PERCY_REPORT_URL` to change it.
+- The site URL comes from `lib/config.js` (the deployed site by default, with a commented-out `http://localhost:5173` line for local development). Set `PERCY_REPORT_URL` to override it for a single run.
 
 ## Errors
 

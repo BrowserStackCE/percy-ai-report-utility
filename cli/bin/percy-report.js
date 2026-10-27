@@ -3,11 +3,12 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { AuthError, RATE_LIMIT_PER_MINUTE, validateBrowserStack, validatePercyToken } from "../lib/percyAuth.js";
+import { REPORT_SITE_URL } from "../lib/config.js";
 import { ask } from "../lib/prompt.js";
 import { clearCredentials, loadCredentials, mask, saveCredentials } from "../lib/store.js";
 
 const { version } = createRequire(import.meta.url)("../package.json");
-const WEB_URL = process.env.PERCY_REPORT_URL || "http://localhost:5173";
+const WEB_URL = (process.env.PERCY_REPORT_URL || REPORT_SITE_URL).replace(/\/+$/, "");
 
 function printError(err) {
   console.error(`\n✖ ${err.message}`);
