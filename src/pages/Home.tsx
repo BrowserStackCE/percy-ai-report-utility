@@ -106,19 +106,35 @@ const buildColumns = (formatDateTime: (iso: string | null) => string): Column<Bu
     header: "Snapshots",
     info: "Total snapshots in the build. Underneath: how many comparisons showed a visual difference from the base build, and how many snapshots are still unreviewed.",
     align: "center",
-    render: (b) => (
-      <div className="flex flex-col items-center gap-2">
-        <span className="text-base font-semibold tabular-nums text-ink-900">{count(b.totalSnapshots)}</span>
-        <div className="flex flex-wrap justify-center gap-1.5">
-          <StatusPill tone={(b.comparisonsWithDiffs ?? 0) > 0 ? "danger" : "neutral"}>
-            {count(b.comparisonsWithDiffs)} with diffs
-          </StatusPill>
-          <StatusPill tone={(b.unreviewedSnapshots ?? 0) > 0 ? "warn" : "mint"}>
-            {count(b.unreviewedSnapshots)} unreviewed
-          </StatusPill>
+    render: (b) => {
+      const diffs = b.comparisonsWithDiffs ?? 0;
+      const unreviewed = b.unreviewedSnapshots ?? 0;
+      return (
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="text-sm">
+            <span className="text-base font-semibold tabular-nums text-ink-900">{count(b.totalSnapshots)}</span>{" "}
+            <span className="text-ink-500">{b.totalSnapshots === 1 ? "snapshot" : "snapshots"}</span>
+          </span>
+          {/* Small, quiet counts under the total: a figure plus a muted label, red only when something needs attention. */}
+          {(diffs > 0 || unreviewed > 0) && (
+            <div className="flex flex-col items-center gap-0.5 text-xs leading-5">
+              {diffs > 0 && (
+                <span>
+                  <span className="font-semibold tabular-nums text-ink-900">{count(diffs)}</span>{" "}
+                  <span className="text-ink-500">{diffs === 1 ? "diff" : "diffs"}</span>
+                </span>
+              )}
+              {unreviewed > 0 && (
+                <span>
+                  <span className="font-semibold tabular-nums text-danger-600">{count(unreviewed)}</span>{" "}
+                  <span className="text-danger-600">unreviewed</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-    ),
+      );
+    },
   },
   {
     key: "review",

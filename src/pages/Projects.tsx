@@ -47,6 +47,10 @@ function ProjectSearch({ query, onQuery }: { query: string; onQuery: (v: string)
 
 function ProjectRow({ project, selected, onOpen }: { project: Project; selected: boolean; onOpen: (p: Project) => void }) {
   const { formatDate } = useDateFormat();
+  const ranBy = project.organization?.ownerName ?? null;
+  const orgName = project.organization?.name ?? null;
+  // The organization only earns a second line when it is not just the person's own name again.
+  const orgLabel = orgName && orgName !== ranBy ? orgName : null;
   return (
     <tr
       className="cursor-pointer align-top transition-colors hover:bg-page/60 focus-within:bg-page/60"
@@ -63,18 +67,36 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
           className="block w-full max-w-[15rem] text-left"
         >
           <span className="text-base font-semibold text-ink-900 hover:text-brand-600">{project.name}</span>
-          <Truncate className="mt-0.5 text-sm text-ink-500">{project.fullSlug}</Truncate>
+          {/* Percy's URL id for the project. The account prefix of the full slug is the same on every row, so it is left out. */}
+          <Truncate className="mt-0.5 font-mono text-xs text-ink-500">{project.slug}</Truncate>
         </button>
       </td>
-      <td className="whitespace-nowrap px-4 py-5 text-sm text-ink-500">{formatDate(project.createdAt)}</td>
       <td className="px-4 py-5">
-        <div className="flex items-center gap-2">
-          <Chip>{project.type}</Chip>
-          {project.demo && <Chip>demo</Chip>}
+        <div className="max-w-[12rem] min-w-0">
+          {ranBy ? (
+            <Truncate className="text-sm font-medium text-ink-900">{ranBy}</Truncate>
+          ) : (
+            <span className="text-sm italic text-ink-400" title="Percy did not return who owns this project">
+              Not provided
+            </span>
+          )}
+          {orgLabel && <Truncate className="mt-0.5 text-xs text-ink-500">{orgLabel}</Truncate>}
         </div>
       </td>
+      <td className="whitespace-nowrap px-4 py-5 text-sm text-ink-500">{formatDate(project.createdAt)}</td>
+      {/* Type and base branch share one cell so the table fits without a horizontal scroll. */}
       <td className="px-4 py-5">
-        {project.defaultBaseBranch ? <Chip mono>{project.defaultBaseBranch}</Chip> : <span className="text-ink-400">—</span>}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip>{project.type}</Chip>
+          {project.demo && <Chip>demo</Chip>}
+          {project.defaultBaseBranch && (
+            <Chip mono>
+              <span className="max-w-[8rem] truncate" title={`Base branch: ${project.defaultBaseBranch}`}>
+                {project.defaultBaseBranch}
+              </span>
+            </Chip>
+          )}
+        </div>
       </td>
       <td className="px-4 py-5 text-right text-sm tabular-nums text-ink-700">
         {project.usage ?? "—"}
@@ -150,14 +172,14 @@ export default function Projects() {
 
           {status === "loading" && projects.length === 0 ? (
             <LoadingOverlay label="Loading projects">
-              <TableSkeleton rows={6} cols={6} />
+              <TableSkeleton rows={6} cols={7} />
             </LoadingOverlay>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-line bg-card">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-line">
-                    {["Project", "Created", "Type", "Base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
+                    {["Project", "Ran by", "Created", "Type / base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
                       <th
                         key={h}
                         scope="col"

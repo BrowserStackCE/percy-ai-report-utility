@@ -68,6 +68,19 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  /** Name of the organization's owner, filled in by the members lookup. Null until it has loaded or when Percy names nobody. */
+  ownerName: string | null;
+}
+
+/** Raw JSON:API shapes returned by GET /organizations/:slug/organization-users?include=user. */
+export interface RawOrganizationUsersResponse {
+  data?: Array<{
+    type: string;
+    id: string;
+    attributes?: { owner?: boolean; role?: string };
+    relationships?: { user?: RawRelationship };
+  }>;
+  included?: RawIncluded[];
 }
 
 export interface Project {

@@ -22,6 +22,7 @@ import {
   SkeletonLines,
   StackedBar,
   StatCard,
+  StatusPill,
   TabBar,
   Widget,
   buttonClass,
@@ -35,34 +36,67 @@ type Row = [string, ReactNode];
 /** True when Percy sent nothing for the field: null, undefined, an empty string or the "—" placeholder. */
 const isMissing = (v: ReactNode) => v === null || v === undefined || v === "" || v === "—";
 
+/** A yes/no answer shown as a pill so it reads at a glance. Create one with `yesNo`. */
+function YesNoPill({ value }: { value: boolean }) {
+  return <StatusPill tone={value ? "mint" : "neutral"}>{value ? "Yes" : "No"}</StatusPill>;
+}
+
+const yesNo = (v: boolean): ReactNode => <YesNoPill value={v} />;
+
+/** A group of label / value rows, named after the widget it appears in. */
+interface FactGroup {
+  title: string;
+  rows: Row[];
+}
+
 /**
- * Label / value rows used inside the detail widgets. Every row is shown so it is clear which fields
- * Percy did not send: those read "Not provided" in a muted style and are listed after the ones with data.
+ * Label / value rows used inside the detail widgets. Only the rows Percy actually returned are shown,
+ * with the label in bold. The rest are listed once at the end of the tab by <NotReturnedCard>, so a
+ * gap is never mistaken for a real value.
  */
 function Facts({ rows }: { rows: Row[] }) {
   const present = rows.filter(([, v]) => !isMissing(v));
-  const missing = rows.filter(([, v]) => isMissing(v));
+  if (present.length === 0) return <p className="text-sm text-ink-400">Nothing returned for this section.</p>;
   return (
-    <dl className="grid grid-cols-[minmax(0,11rem)_1fr] gap-x-4 gap-y-2.5 text-sm">
+    <dl className="grid grid-cols-[minmax(0,11rem)_1fr] items-center gap-x-4 gap-y-2.5 text-sm">
       {present.map(([label, value]) => (
         <div key={label} className="contents">
-          <dt className="text-ink-500">{label}</dt>
+          <dt className="font-semibold text-ink-700">{label}</dt>
           <dd className="min-w-0 break-words text-ink-900">{value}</dd>
-        </div>
-      ))}
-      {missing.map(([label]) => (
-        <div key={label} className="contents">
-          <dt className="text-ink-400">{label}</dt>
-          <dd className="min-w-0 italic text-ink-400" title="Percy did not return this field for the build">
-            Not provided
-          </dd>
         </div>
       ))}
     </dl>
   );
 }
 
-const yesNo = (v: boolean) => (v ? "Yes" : "No");
+/** The closing card of a tab: every field Percy did not return, grouped by the widget it belongs to. */
+function NotReturnedCard({ groups }: { groups: FactGroup[] }) {
+  const missing = groups
+    .map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => isMissing(v)) }))
+    .filter((g) => g.rows.length > 0);
+  if (missing.length === 0) return null;
+  return (
+    <Widget
+      title="Fields Percy did not return"
+      info="Fields this page can show but that Percy sent empty for this build. They are collected here at the end so they are not mistaken for real values."
+    >
+      <div className="space-y-4">
+        {missing.map((g) => (
+          <div key={g.title}>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500">{g.title}</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {g.rows.map(([label]) => (
+                <li key={label}>
+                  <Chip>{label}</Chip>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </Widget>
+  );
+}
 
 function ExternalLink({ href, children }: { href: string | null; children: ReactNode }) {
   if (!href) return <>{children}</>;
@@ -166,11 +200,11 @@ function DetailsSkeleton() {
 }
 
 /**
- * Overview fields that depend on data Percy only sometimes sends. The card lists only the ones that
- * came back empty for this build, as "Not provided", so missing data is visible rather than silent.
+ * Overview fields that depend on data Percy only sometimes sends. Whichever of these came back empty
+ * for this build are listed in the closing "Fields Percy did not return" card.
  */
-function missingOverviewFields(b: Build): Row[] {
-  const rows: Row[] = [
+function overviewFields(b: Build): Row[] {
+  return [
     ["Build number", b.buildNumber !== null ? `#${b.buildNumber}` : null],
     ["Project", b.projectName],
     ["Branch", b.branch],
@@ -191,7 +225,128 @@ function missingOverviewFields(b: Build): Row[] {
     ["Figma design", b.figma ? "Linked" : null],
     ["Percy link", b.percyUrl],
   ];
-  return rows.filter(([, v]) => isMissing(v));
+}
+
+/** Rows for the Build details tab, one group per widget. The widgets and the closing card both read these. */
+function detailGroups(b: Build, formatDateTime: (iso: string | null) => string): Record<string, Row[]> {
+  const ai = b.ai;
+  return {
+    review: [
+      ["Review state", humanize(b.reviewState)],
+      ["Reason", humanize(b.reviewStateReason)],
+      ["Rejected snapshots", b.rejectedSnapshots ? count(b.rejectedSnapshots) : null],
+      ["Rejection reason", b.rejectionReason],
+      ["Approved at", b.approvedAt ? formatDateTime(b.approvedAt) : null],
+      ["Last action", b.latestActionAt ? formatDateTime(b.latestActionAt) : null],
+      ["Action reason", humanize(b.actionReasons)],
+      ["Action comment", b.actionReasonsComment],
+      ["Self-approval blocked", yesNo(b.selfApprovalBlocked)],
+    ],
+    source: [
+      ["Project", b.projectName],
+      ["Branch", b.branch ? <ExternalLink key="b" href={b.branchUrl}>{b.branch}</ExternalLink> : null],
+      [
+        "Commit",
+        b.commit?.sha ? (
+          <ExternalLink key="c" href={b.commitUrl}>
+            <span className="font-mono">{shortSha(b.commit.sha)}</span>
+          </ExternalLink>
+        ) : null,
+      ],
+      ["Commit message", b.commit?.message?.split("\n")[0] ?? null],
+      ["Author", b.commit?.author ?? null],
+      [
+        "Pull request",
+        b.isPullRequest ? (
+          <ExternalLink key="p" href={b.pullRequestUrl}>
+            #{b.pullRequestNumber ?? "?"} {b.pullRequestTitle ?? ""}
+          </ExternalLink>
+        ) : (
+          yesNo(false)
+        ),
+      ],
+      ["Type", humanize(b.type)],
+      ["Source", humanize(b.source)],
+      ["Latest on branch", yesNo(b.isLatestOnBranch)],
+      ["Partial build", yesNo(b.partial)],
+      ["Partial results", yesNo(b.hasPartialResults)],
+      ["Different base build", yesNo(b.differentBaseBuild)],
+      ["Skip base-branch processing", yesNo(b.skipBaseBranchProcessing)],
+      ["Skip allowed", yesNo(b.skipBaseBranchProcessingAllowed)],
+    ],
+    timing: [
+      ["CLI started", b.cliStartedAt ? formatDateTime(b.cliStartedAt) : null],
+      ["Started", formatDateTime(b.createdAt)],
+      ["CI finished (finalized)", b.finalizedAt ? formatDateTime(b.finalizedAt) : null],
+      ["Percy finished", b.finishedAt ? formatDateTime(b.finishedAt) : null],
+      ["Last updated", formatDateTime(b.updatedAt)],
+      ["Percy processing time", formatDuration(b.processingSeconds)],
+      ["Total build processing", formatDuration(b.buildProcessingSeconds)],
+      ["Median processing time", formatDuration(b.medianProcessingSeconds)],
+      ["Average build time", formatDuration(b.averageSeconds)],
+      ["Builds in average", b.buildCountForAverage !== null ? count(b.buildCountForAverage) : null],
+      ["Queued", b.timings ? formatDuration(b.timings.queuedSeconds) : null],
+      ["Processing (queue metrics)", b.timings ? formatDuration(b.timings.processingSeconds) : null],
+      [
+        "Avg / max queue wait",
+        b.timings ? `${formatDuration(b.timings.queueWaitAvgSeconds)} / ${formatDuration(b.timings.queueWaitMaxSeconds)}` : null,
+      ],
+    ],
+    aiCounts: ai?.enabled
+      ? [
+          ["Potential bugs", count(ai.potentialBugs)],
+          ["AI visual diffs", count(ai.aiVisualDiffs)],
+          ["Diffs reduced", count(ai.diffsReduced)],
+          ["Diffs reduced (capped)", count(ai.diffsReducedCapped)],
+          ["Snapshots analysed", count(ai.snapshotsWithAi)],
+          ["Comparisons analysed", count(ai.comparisonsWithAi)],
+          ["AI jobs completed", yesNo(ai.allJobsCompleted)],
+        ]
+      : [],
+    aiSummary: ai?.enabled
+      ? [
+          ["Summary status", humanize(ai.summaryStatus)],
+          ["Summary reason", humanize(ai.summaryReason)],
+          ["Partial coverage", ai.summaryPartialCoverage ? yesNo(true) : null],
+          ["Remediation status", humanize(ai.remediationStatus)],
+          ["Remediation reason", humanize(ai.remediationReason)],
+        ]
+      : [],
+    comparisons: [
+      ["Total comparisons", count(b.totalComparisons)],
+      ["Finished", count(b.comparisonsFinished)],
+      ["With diffs", count(b.comparisonsWithDiffs)],
+      ["Skipped by SmartSnap", count(b.smartSnapSkipped)],
+      ["Failed snapshots", count(b.failedSnapshots)],
+      ["Open comments", count(b.openComments)],
+      ["Open issues", count(b.openIssues)],
+      ["Snapshot approved", yesNo(b.snapshotApproved)],
+    ],
+    testCases:
+      (b.testCases ?? 0) > 0
+        ? [
+            ["Total", count(b.testCases)],
+            ["Unreviewed", count(b.testCasesUnreviewed)],
+            ["Failed", count(b.testCasesFailed)],
+            ["TestHub build", b.testhubBuildUuid ? <span key="u" className="font-mono text-xs">{b.testhubBuildUuid}</span> : null],
+          ]
+        : [],
+    run: [
+      ["Parallel nonce", b.parallelNonce],
+      ["Parallel shards", b.parallelShards],
+      ["Client", b.userAgent],
+      ["Production build", yesNo(b.prodBuild)],
+      ["Design build", yesNo(b.designBuild)],
+      ["Build ID", <span key="id" className="font-mono">{b.id}</span>],
+    ],
+    figma: b.figma
+      ? [
+          ["File", b.figma.fileName],
+          ["Flow", b.figma.flow],
+          ["Link", b.figma.url ? <ExternalLink key="f" href={b.figma.url}>Open in Figma</ExternalLink> : null],
+        ]
+      : [],
+  };
 }
 
 function aiSegments(b: Build): Segment[] {
@@ -246,6 +401,17 @@ export default function BuildDetails() {
   const hasTestCases = (b.testCases ?? 0) > 0;
   const ai = b.ai;
   const failed = b.state === "failed";
+  const g = detailGroups(b, formatDateTime);
+  const detailTitles: FactGroup[] = [
+    { title: "Review progress", rows: g.review },
+    { title: "Source", rows: g.source },
+    { title: "Timing", rows: g.timing },
+    { title: "Percy AI", rows: [...g.aiCounts, ...g.aiSummary] },
+    { title: "Comparisons", rows: g.comparisons },
+    { title: "Test cases", rows: g.testCases },
+    { title: "Run details", rows: g.run },
+    { title: "Figma", rows: g.figma },
+  ];
 
   return (
     <PageContainer>
@@ -321,14 +487,7 @@ export default function BuildDetails() {
 
       <SnapshotSummary state={allSnapshots} buildTotal={b.totalSnapshots} buildId={b.id} />
 
-      {missingOverviewFields(b).length > 0 && (
-        <Widget
-          title="Fields Percy did not return"
-          info="Fields this page can show but that Percy sent empty for this build. They are listed here so it is clear the data is missing, not hidden."
-        >
-          <Facts rows={missingOverviewFields(b)} />
-        </Widget>
-      )}
+      <NotReturnedCard groups={[{ title: "Overview", rows: overviewFields(b) }]} />
       </LazyTab>
 
       <LazyTab id="snapshots" active={tab === "snapshots"} label="Loading snapshots">
@@ -353,85 +512,19 @@ export default function BuildDetails() {
             ))}
           </ul>
           <div className="mt-5">
-            <Facts
-              rows={[
-                ["Review state", humanize(b.reviewState)],
-                ["Reason", humanize(b.reviewStateReason)],
-                ["Rejected snapshots", b.rejectedSnapshots ? count(b.rejectedSnapshots) : null],
-                ["Rejection reason", b.rejectionReason],
-                ["Approved at", b.approvedAt ? formatDateTime(b.approvedAt) : null],
-                ["Last action", b.latestActionAt ? formatDateTime(b.latestActionAt) : null],
-                ["Action reason", humanize(b.actionReasons)],
-                ["Action comment", b.actionReasonsComment],
-                ["Self-approval blocked", yesNo(b.selfApprovalBlocked)],
-              ]}
-            />
+            <Facts rows={g.review} />
           </div>
         </Widget>
 
         <Widget title="Source" info="Where this build came from.">
-          <Facts
-            rows={[
-              ["Project", b.projectName],
-              ["Branch", b.branch ? <ExternalLink key="b" href={b.branchUrl}>{b.branch}</ExternalLink> : null],
-              [
-                "Commit",
-                b.commit?.sha ? (
-                  <ExternalLink key="c" href={b.commitUrl}>
-                    <span className="font-mono">{shortSha(b.commit.sha)}</span>
-                  </ExternalLink>
-                ) : null,
-              ],
-              ["Commit message", b.commit?.message?.split("\n")[0] ?? null],
-              ["Author", b.commit?.author ?? null],
-              [
-                "Pull request",
-                b.isPullRequest ? (
-                  <ExternalLink key="p" href={b.pullRequestUrl}>
-                    #{b.pullRequestNumber ?? "?"} {b.pullRequestTitle ?? ""}
-                  </ExternalLink>
-                ) : (
-                  "No"
-                ),
-              ],
-              ["Type", humanize(b.type)],
-              ["Source", humanize(b.source)],
-              ["Latest on branch", yesNo(b.isLatestOnBranch)],
-              ["Partial build", yesNo(b.partial)],
-              ["Partial results", yesNo(b.hasPartialResults)],
-              ["Different base build", yesNo(b.differentBaseBuild)],
-              ["Skip base-branch processing", yesNo(b.skipBaseBranchProcessing)],
-              ["Skip allowed", yesNo(b.skipBaseBranchProcessingAllowed)],
-            ]}
-          />
+          <Facts rows={g.source} />
         </Widget>
 
         <Widget
           title="Timing"
           info={`When the build ran and how long Percy took. All times are shown in ${option.label}; change the time zone from the picker at the top of the page.`}
         >
-          <Facts
-            rows={[
-              ["CLI started", b.cliStartedAt ? formatDateTime(b.cliStartedAt) : null],
-              ["Started", formatDateTime(b.createdAt)],
-              ["CI finished (finalized)", b.finalizedAt ? formatDateTime(b.finalizedAt) : null],
-              ["Percy finished", b.finishedAt ? formatDateTime(b.finishedAt) : null],
-              ["Last updated", formatDateTime(b.updatedAt)],
-              ["Percy processing time", formatDuration(b.processingSeconds)],
-              ["Total build processing", formatDuration(b.buildProcessingSeconds)],
-              ["Median processing time", formatDuration(b.medianProcessingSeconds)],
-              ["Average build time", formatDuration(b.averageSeconds)],
-              ["Builds in average", b.buildCountForAverage !== null ? count(b.buildCountForAverage) : null],
-              ["Queued", b.timings ? formatDuration(b.timings.queuedSeconds) : null],
-              ["Processing (queue metrics)", b.timings ? formatDuration(b.timings.processingSeconds) : null],
-              [
-                "Avg / max queue wait",
-                b.timings
-                  ? `${formatDuration(b.timings.queueWaitAvgSeconds)} / ${formatDuration(b.timings.queueWaitMaxSeconds)}`
-                  : null,
-              ],
-            ]}
-          />
+          <Facts rows={g.timing} />
         </Widget>
 
         <Widget
@@ -442,28 +535,10 @@ export default function BuildDetails() {
             <>
               <StackedBar segments={aiSegments(b)} />
               <div className="mt-4">
-                <Facts
-                  rows={[
-                    ["Potential bugs", count(ai.potentialBugs)],
-                    ["AI visual diffs", count(ai.aiVisualDiffs)],
-                    ["Diffs reduced", count(ai.diffsReduced)],
-                    ["Diffs reduced (capped)", count(ai.diffsReducedCapped)],
-                    ["Snapshots analysed", count(ai.snapshotsWithAi)],
-                    ["Comparisons analysed", count(ai.comparisonsWithAi)],
-                    ["AI jobs completed", yesNo(ai.allJobsCompleted)],
-                  ]}
-                />
+                <Facts rows={g.aiCounts} />
               </div>
               <div className="mt-5">
-                <Facts
-                  rows={[
-                    ["Summary status", humanize(ai.summaryStatus)],
-                    ["Summary reason", humanize(ai.summaryReason)],
-                    ["Partial coverage", ai.summaryPartialCoverage ? "Yes" : null],
-                    ["Remediation status", humanize(ai.remediationStatus)],
-                    ["Remediation reason", humanize(ai.remediationReason)],
-                  ]}
-                />
+                <Facts rows={g.aiSummary} />
               </div>
             </>
           ) : (
@@ -475,18 +550,7 @@ export default function BuildDetails() {
           title="Comparisons"
           info="A comparison is one snapshot rendered in one browser at one width and checked against the base build. This breaks down how many finished, how many differ, and how many SmartSnap skipped."
         >
-          <Facts
-            rows={[
-              ["Total comparisons", count(b.totalComparisons)],
-              ["Finished", count(b.comparisonsFinished)],
-              ["With diffs", count(b.comparisonsWithDiffs)],
-              ["Skipped by SmartSnap", count(b.smartSnapSkipped)],
-              ["Failed snapshots", count(b.failedSnapshots)],
-              ["Open comments", count(b.openComments)],
-              ["Open issues", count(b.openIssues)],
-              ["Snapshot approved", yesNo(b.snapshotApproved)],
-            ]}
-          />
+          <Facts rows={g.comparisons} />
         </Widget>
 
         {hasTestCases && (
@@ -494,14 +558,7 @@ export default function BuildDetails() {
             title="Test cases"
             info="Test cases reported by BrowserStack Test Observability (TestHub) for this build, with how many still need review or failed."
           >
-            <Facts
-              rows={[
-                ["Total", count(b.testCases)],
-                ["Unreviewed", count(b.testCasesUnreviewed)],
-                ["Failed", count(b.testCasesFailed)],
-                ["TestHub build", b.testhubBuildUuid ? <span key="u" className="font-mono text-xs">{b.testhubBuildUuid}</span> : null],
-              ]}
-            />
+            <Facts rows={g.testCases} />
           </Widget>
         )}
 
@@ -509,19 +566,10 @@ export default function BuildDetails() {
           title="Run details"
           info="How this build was produced: the Percy client that uploaded it, whether it was split across parallel shards, and its build type."
         >
-          <Facts
-            rows={[
-              ["Parallel nonce", b.parallelNonce],
-              ["Parallel shards", b.parallelShards],
-              ["Client", b.userAgent],
-              ["Production build", yesNo(b.prodBuild)],
-              ["Design build", yesNo(b.designBuild)],
-              ["Build ID", <span key="id" className="font-mono">{b.id}</span>],
-            ]}
-          />
+          <Facts rows={g.run} />
           {b.featureInteractions.length > 0 && (
             <div className="mt-5">
-              <p className="mb-2 text-sm text-ink-500">State-changing feature interactions</p>
+              <p className="mb-2 text-sm font-semibold text-ink-700">State-changing feature interactions</p>
               <div className="flex flex-wrap gap-2">
                 {b.featureInteractions.map((f) => (
                   <Chip key={f}>{f}</Chip>
@@ -533,15 +581,11 @@ export default function BuildDetails() {
 
         {b.figma && (
           <Widget title="Figma" info="The Figma design file this build was compared against, and the flow used.">
-            <Facts
-              rows={[
-                ["File", b.figma.fileName],
-                ["Flow", b.figma.flow],
-                ["Link", b.figma.url ? <ExternalLink key="f" href={b.figma.url}>Open in Figma</ExternalLink> : null],
-              ]}
-            />
+            <Facts rows={g.figma} />
           </Widget>
         )}
+
+        <NotReturnedCard groups={detailTitles} />
       </LazyTab>
     </PageContainer>
   );

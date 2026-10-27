@@ -45,6 +45,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   const hotReload = useCallback(() => {
     clearProjectsCache();
     bypassCache.current = true;
+    // Drop the list on screen as well, so the page shows its loading state while Percy is asked again
+    // instead of keeping the stale rows until the new ones arrive.
+    setState({ status: "loading", projects: [], error: null });
     setNonce((n) => n + 1);
   }, []);
 
@@ -64,6 +67,8 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     const scope = scopeOfCredentials(credentials);
     const owner = cacheOwner(credentials);
 
+    // The cache was cleared by hotReload, so it is empty anyway; the flag only has to survive until a
+    // request actually completes, because React may run this effect twice in development.
     if (!bypassCache.current) {
       const cached = readProjectsCache(owner);
       if (cached) {
@@ -72,13 +77,13 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         return;
       }
     }
-    bypassCache.current = false;
 
     const controller = new AbortController();
     setState((prev) => ({ status: "loading", projects: prev.projects, error: null }));
 
     listProjects({ auth, signal: controller.signal })
       .then((projects) => {
+        bypassCache.current = false;
         writeProjectsCache(owner, projects);
         setState({ status: "ready", projects: projectsForScope(projects, scope), error: null });
         setMeta({ fetchedAt: Date.now(), fromCache: false });
