@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router";
 import logo from "../../assets/logo.png";
 import SidebarToggle from "./SidebarToggle";
-import { FileText, Folder } from "../ui/Icons";
+import { FileText, Folder, Pulse } from "../ui/Icons";
 import { useProjects } from "../../api/projects/useProjects";
 import { useSelectedProject } from "../../api/projects/SelectedProjectProvider";
 import { projectsForProduct, useProduct, type Product } from "../../api/projects/ProductProvider";
@@ -121,6 +121,7 @@ export default function Sidebar() {
         <div className="space-y-0.5">
           <SidebarNavItem to="/projects" icon={<Folder size={18} />} label="Projects" />
           <SidebarNavItem to="/" end icon={<FileText size={18} />} label="Reports" />
+          <SidebarNavItem to="/analytics" icon={<Pulse size={18} />} label="Analytics" />
         </div>
       </nav>
     </aside>
