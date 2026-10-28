@@ -90,6 +90,10 @@ export function mapBuild(raw: RawBuild, included?: RawResource[]): Build | null 
       }
     : null;
 
+  const approverRef = raw.relationships?.["approved-by"]?.data;
+  const approverRes = approverRef?.id ? res.get(`${approverRef.type}:${approverRef.id}`) : undefined;
+  const approvedBy = str(approverRes?.attributes?.name) ?? str(approverRes?.attributes?.email);
+
   const shards = a["parallel-total-shards"];
   const errorBuckets = Array.isArray(a["error-buckets"])
     ? a["error-buckets"]
@@ -145,6 +149,7 @@ export function mapBuild(raw: RawBuild, included?: RawResource[]): Build | null 
     actionReasonsComment: str(a["action-reasons-comment"]),
     latestActionAt: str(a["latest-action-performed-at"]),
     rejectionReason: str(a["rejection-reason"]),
+    approvedBy,
     failedBy: str(a["failed-by"]),
     failedType: str(a["failed-type"]),
     manuallyFailedReason: str(a["manually-failed-reason"]),

@@ -112,6 +112,7 @@ export interface RawBuild {
   relationships?: {
     project?: { data?: { type: string; id: string } | null };
     commit?: { data?: { type: string; id: string } | null };
+    "approved-by"?: { data?: { type: string; id: string } | null };
   };
 }
 
@@ -210,6 +211,8 @@ export interface Build {
   actionReasonsComment: string | null;
   latestActionAt: string | null;
   rejectionReason: string | null;
+  /** Name of the person who approved the build, when Percy includes the approver in `included`. */
+  approvedBy: string | null;
   failedBy: string | null;
   failedType: string | null;
   manuallyFailedReason: string | null;
