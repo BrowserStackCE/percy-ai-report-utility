@@ -41,6 +41,7 @@ export function Select<T extends string>({
 
   return (
     <Popover
+      triggerClassName="w-full"
       panelClassName="w-full min-w-56 py-1.5"
       trigger={({ toggle, triggerProps }) => (
         <button
@@ -56,8 +57,8 @@ export function Select<T extends string>({
             className,
           )}
         >
-          <span className={cn("truncate", !current && "text-ink-400")}>{current?.label ?? placeholder ?? ""}</span>
-          {variant === "field" ? <ChevronsUpDown size={16} className="text-ink-500" /> : <ChevronDown size={16} className="text-ink-500" />}
+          <span className={cn("min-w-0 flex-1 truncate text-left", !current && "text-ink-400")}>{current?.label ?? placeholder ?? ""}</span>
+          {variant === "field" ? <ChevronsUpDown size={16} className="shrink-0 text-ink-400" /> : <ChevronDown size={16} className="shrink-0 text-ink-400" />}
         </button>
       )}
     >

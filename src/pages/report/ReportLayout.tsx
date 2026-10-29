@@ -38,7 +38,7 @@ export default function ReportLayout() {
 
   return (
     <div className="min-h-full space-y-4 bg-page p-4">
-      <div className="rounded-xl border border-line bg-white px-6 pt-5">
+      <div className="rounded-xl border border-line bg-card px-6 pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -87,7 +87,7 @@ export default function ReportLayout() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-line bg-white px-6 py-6">
+      <div className="rounded-xl border border-line bg-card px-6 py-6">
         <Outlet context={{ report } satisfies ReportContext} />
       </div>
     </div>

@@ -9,6 +9,7 @@ import { useDateFormat } from "../lib/dateFormat";
 import {
   Button,
   Card,
+  EmptyState,
   Chip,
   LoadingOverlay,
   PageContainer,
@@ -115,6 +116,7 @@ export default function Projects() {
   const { projectId, setProjectId } = useSelectedProject();
   const { product: chosen } = useProduct();
   const navigate = useNavigate();
+  const { formatDate } = useDateFormat();
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   // Follows the Web / App switch in the sidebar, the same list the project picker offers.
@@ -154,7 +156,7 @@ export default function Projects() {
 
       {error && (
         <Card className="p-5">
-          <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
+          <p role="alert" className="text-sm font-medium text-danger-600">{error.message}</p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
           <div className="mt-3 flex gap-2">
             {error.kind === "not_authenticated" || error.kind === "unauthorized" ? (
@@ -175,8 +177,29 @@ export default function Projects() {
               <TableSkeleton rows={6} cols={7} />
             </LoadingOverlay>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line bg-card">
-              <table className="w-full text-left text-sm">
+            <>
+            <div className="space-y-3 md:hidden">
+              {visible.map((p) => (
+                <Card key={p.id} className="p-4">
+                  <button type="button" onClick={() => open(p)} className="w-full text-left">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink-900">{p.name}</p>
+                        <Truncate className="mt-1 font-mono text-xs text-ink-500">{p.fullSlug}</Truncate>
+                      </div>
+                      <StatusPill tone={p.enabled ? "mint" : "warn"}>{p.enabled ? "Enabled" : "Archived"}</StatusPill>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-500">
+                      <span>{p.organization?.ownerName ?? "Owner not provided"}</span>
+                      <span>Updated {formatDate(p.updatedAt)}</span>
+                    </div>
+                  </button>
+                </Card>
+              ))}
+              {visible.length === 0 && <EmptyState title="No projects found" description={query ? "Try a different search." : `No ${product} projects are available.`} />}
+            </div>
+            <div className="hidden overflow-x-auto rounded-xl border border-line bg-card md:block">
+              <table className="w-full min-w-[900px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-line">
                     {["Project", "Ran by", "Created", "Type / base branch", "Screenshots", "Updated", "Status"].map((h, i) => (
@@ -208,6 +231,7 @@ export default function Projects() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {rows.length > PAGE_SIZE && (

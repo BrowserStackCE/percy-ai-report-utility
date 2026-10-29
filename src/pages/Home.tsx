@@ -208,7 +208,7 @@ export default function Home() {
 
       {error ? (
         <Card className="p-5">
-          <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
+          <p role="alert" className="text-sm font-medium text-danger-600">{error.message}</p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
           <div className="mt-3 flex gap-2">
             {error.kind === "not_authenticated" || error.kind === "unauthorized" ? (
@@ -284,12 +284,37 @@ export default function Home() {
             </LoadingOverlay>
           ) : (
             <>
-              <DataTable
-                columns={columns}
-                rows={builds}
-                rowKey={(b) => b.id}
-                empty={filtered ? "No builds match these filters." : "No builds in the last 30 days for this project."}
-              />
+              <div className="space-y-3 md:hidden">
+                {builds.map((b) => (
+                  <Card key={b.id} className="p-4">
+                    <Link to={`/reports/${b.id}`} className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-semibold text-ink-900">#{b.buildNumber ?? b.id}</p>
+                        <p className="mt-1 text-xs text-ink-500">{formatDateTime(b.createdAt)}</p>
+                      </div>
+                      <StatusPill tone={stateTone[b.state]}>{humanize(b.state)}</StatusPill>
+                    </Link>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {b.branch && <Chip>{b.branch}</Chip>}
+                      {b.reviewState && <StatusPill tone={reviewTone[b.reviewState] ?? "neutral"}>{humanize(b.reviewState)}</StatusPill>}
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-sm">
+                      <div><span className="block text-xs text-ink-500">Snapshots</span><strong>{count(b.totalSnapshots)}</strong></div>
+                      <div><span className="block text-xs text-ink-500">Diffs</span><strong>{count(b.comparisonsWithDiffs)}</strong></div>
+                      <div><span className="block text-xs text-ink-500">Duration</span><strong>{formatDuration(b.processingSeconds)}</strong></div>
+                    </div>
+                  </Card>
+                ))}
+                {builds.length === 0 && <Card className="p-8 text-center text-sm text-ink-500">{filtered ? "No builds match these filters." : "No builds in the last 30 days for this project."}</Card>}
+              </div>
+              <div className="hidden md:block">
+                <DataTable
+                  columns={columns}
+                  rows={builds}
+                  rowKey={(b) => b.id}
+                  empty={filtered ? "No builds match these filters." : "No builds in the last 30 days for this project."}
+                />
+              </div>
               <Pagination
                 page={page}
                 hasPrev={hasPrev}

@@ -12,10 +12,11 @@ interface PopoverProps {
   children: (args: { close: () => void }) => ReactNode;
   align?: "left" | "right";
   panelClassName?: string;
+  triggerClassName?: string;
 }
 
 /** Anchored floating panel with click-outside and Escape dismissal. */
-export function Popover({ trigger, children, align = "left", panelClassName }: PopoverProps) {
+export function Popover({ trigger, children, align = "left", panelClassName, triggerClassName }: PopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
@@ -39,7 +40,7 @@ export function Popover({ trigger, children, align = "left", panelClassName }: P
   const toggle = () => setOpen((v) => !v);
 
   return (
-    <div ref={rootRef} className="relative inline-block">
+    <div ref={rootRef} className={cn("relative inline-block", triggerClassName)}>
       {trigger({
         open,
         toggle,

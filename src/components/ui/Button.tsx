@@ -4,7 +4,7 @@ import { cn } from "./cn";
 type Variant = "primary" | "secondary" | "ghost";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-500 text-white hover:bg-brand-600 border border-transparent",
+  primary: "ui-button-primary text-[var(--color-on-brand)] shadow-[var(--shadow-card)] hover:brightness-95 border border-transparent",
   secondary: "bg-card text-ink-900 border border-line-strong hover:bg-surface",
   ghost: "bg-transparent text-ink-700 border border-transparent hover:bg-chip",
 };

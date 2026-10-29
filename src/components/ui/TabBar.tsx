@@ -19,7 +19,7 @@ interface TabBarProps<T extends string> {
 /** State-driven tab bar (no routing) with the same underline style as the route Tabs. */
 export function TabBar<T extends string>({ items, value, onChange, ariaLabel }: TabBarProps<T>) {
   return (
-    <div role="tablist" aria-label={ariaLabel} className="flex items-center gap-1 border-b border-line">
+    <div role="tablist" aria-label={ariaLabel} className="flex w-full items-stretch gap-1 overflow-x-auto border-b border-line sm:items-center">
       {items.map((t) => {
         const active = t.value === value;
         return (
@@ -32,7 +32,7 @@ export function TabBar<T extends string>({ items, value, onChange, ariaLabel }: 
             aria-controls={`panel-${t.value}`}
             onClick={() => onChange(t.value)}
             className={cn(
-              "-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+              "-mb-px flex min-h-11 min-w-max flex-1 items-center justify-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:flex-none",
               active ? "border-brand-500 text-brand-700" : "border-transparent text-ink-500 hover:text-ink-900",
             )}
           >

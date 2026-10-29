@@ -22,8 +22,8 @@ interface DataTableProps<T> {
 /** Bordered table with an uppercase header row, matching the builds list. */
 export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-card">
-      <table className="w-full text-left text-sm">
+    <div className="max-w-full overflow-x-auto rounded-[var(--radius-card)] border border-line bg-card shadow-[var(--shadow-card)]">
+      <table className="w-full min-w-[760px] text-left text-sm md:min-w-0">
         <thead>
           <tr className="border-b border-line">
             {columns.map((c) => (
@@ -31,7 +31,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                 key={c.key}
                 scope="col"
                 className={cn(
-                  "whitespace-nowrap px-4 py-4 text-[11px] font-semibold uppercase tracking-wider text-ink-500 first:pl-6 last:pr-6",
+                  "whitespace-nowrap bg-surface/60 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-500 first:pl-6 last:pr-6",
                   c.align === "right" && "text-right",
                   c.align === "center" && "text-center",
                   c.className,
@@ -58,7 +58,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
                 <td
                   key={c.key}
                   className={cn(
-                    "px-4 py-5 first:pl-6 last:pr-6",
+                    "border-line px-4 py-4.5 first:pl-6 last:pr-6",
                     c.align === "right" && "text-right",
                     c.align === "center" && "text-center",
                     c.className,

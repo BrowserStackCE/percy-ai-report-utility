@@ -188,7 +188,7 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
 
       {error ? (
         <Card className="p-5">
-          <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
+          <p role="alert" className="text-sm font-medium text-danger-600">{error.message}</p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
           <div className="mt-3 flex gap-2">
             {error.kind === "not_authenticated" || error.kind === "unauthorized" ? (
@@ -265,12 +265,30 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
           ) : (
             <div className="fade-in space-y-4">
               <div className={loadingPage ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loadingPage}>
-                <DataTable
-                  columns={columns}
-                  rows={snapshots}
-                  rowKey={(s) => s.id}
-                  empty={filtered ? "No snapshots match these filters." : "This build has no snapshots."}
-                />
+                <div className="space-y-3 md:hidden">
+                  {snapshots.map((s) => {
+                    const c = primaryComparison(s);
+                    return (
+                      <Card key={s.id} className="p-3">
+                        <SnapshotRow s={s} />
+                        <div className="mt-3 grid grid-cols-3 gap-3 border-t border-line pt-3">
+                          <div><span className="block text-xs text-ink-500">Review</span><StatusPill tone={reviewTone[s.reviewState]}>{humanize(s.reviewState)}</StatusPill></div>
+                          <div><span className="block text-xs text-ink-500">Diff</span><span className="text-sm font-semibold text-ink-900">{c ? formatRatio(c.aiDiffRatio ?? c.diffRatio) : "—"}</span></div>
+                          <div><span className="block text-xs text-ink-500">Comments</span><span className="text-sm font-semibold text-ink-900">{count(s.openComments)}</span></div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                  {snapshots.length === 0 && <Card className="p-8 text-center text-sm text-ink-500">{filtered ? "No snapshots match these filters." : "This build has no snapshots."}</Card>}
+                </div>
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={columns}
+                    rows={snapshots}
+                    rowKey={(s) => s.id}
+                    empty={filtered ? "No snapshots match these filters." : "This build has no snapshots."}
+                  />
+                </div>
               </div>
               <Pagination
                 page={page}

@@ -115,10 +115,10 @@ export function ReportHeader({ build: b }: { build: Build }) {
   ].filter((c): c is string => Boolean(c));
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-0">
+    <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-ink-900">
+          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink-900 sm:truncate">
             {b.projectName ?? "Build"} #{b.buildNumber ?? b.id}
           </h1>
           <ChipOverflow items={[...chips, ...flags]} />
@@ -143,7 +143,7 @@ export function ReportHeader({ build: b }: { build: Build }) {
       </div>
 
       {b.percyUrl && (
-        <a href={b.percyUrl} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
+        <a href={b.percyUrl} target="_blank" rel="noreferrer" className={`${buttonClass("secondary")} w-full justify-center sm:w-auto sm:justify-start`}>
           <External size={16} />
           Open in Percy
         </a>

@@ -58,9 +58,9 @@ function Facts({ rows }: { rows: Row[] }) {
   const present = rows.filter(([, v]) => !isMissing(v));
   if (present.length === 0) return <p className="text-sm text-ink-400">Nothing returned for this section.</p>;
   return (
-    <dl className="grid grid-cols-[minmax(0,11rem)_1fr] items-center gap-x-4 gap-y-2.5 text-sm">
+    <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 text-sm sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:items-center">
       {present.map(([label, value]) => (
-        <div key={label} className="contents">
+        <div key={label} className="grid gap-0.5 border-b border-line pb-2 last:border-b-0 last:pb-0 sm:contents sm:border-0">
           <dt className="font-semibold text-ink-700">{label}</dt>
           <dd className="min-w-0 break-words text-ink-900">{value}</dd>
         </div>
@@ -375,7 +375,7 @@ export default function BuildDetails() {
       <PageContainer>
         <PageHeader title="Build" backTo="/" />
         <Card className="p-5">
-          <p role="alert" className="text-sm font-medium text-red-600">{error?.message ?? "Build not found."}</p>
+          <p role="alert" className="text-sm font-medium text-danger-600">{error?.message ?? "Build not found."}</p>
           {error?.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
           <div className="mt-3 flex gap-2">
             {error && (error.kind === "not_authenticated" || error.kind === "unauthorized") ? (
@@ -441,8 +441,8 @@ export default function BuildDetails() {
 
       <LazyTab id="overview" active={tab === "overview"} label="Loading overview" className="space-y-6">
       {failed && (
-        <Card className="border-red-200 p-5">
-          <p role="alert" className="text-sm font-semibold text-red-600">This build failed: {humanize(b.failureReason)}</p>
+        <Card className="border-danger-600/30 bg-danger-50 p-5">
+          <p role="alert" className="text-sm font-semibold text-danger-600">This build failed: {humanize(b.failureReason)}</p>
           {b.failureDetails && <p className="mt-1 text-sm text-ink-700">{b.failureDetails}</p>}
           {b.manuallyFailedReason && <p className="mt-1 text-sm text-ink-700">{b.manuallyFailedReason}</p>}
           {b.errorBuckets.length > 0 && (

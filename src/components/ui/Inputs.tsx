@@ -32,7 +32,7 @@ export function Checkbox({ label, hint, count, checked, onChange, disabled, clas
         aria-hidden="true"
         className={cn(
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500",
-          checked ? "border-brand-500 bg-brand-500 text-white" : "border-ink-300 bg-card",
+          checked ? "border-brand-500 bg-brand-500 text-[var(--color-on-brand)]" : "border-ink-300 bg-card",
         )}
       >
         {checked && <Check size={14} strokeWidth={3} />}

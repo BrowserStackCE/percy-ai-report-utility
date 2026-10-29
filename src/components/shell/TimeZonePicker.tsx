@@ -8,7 +8,7 @@ export default function TimeZonePicker() {
   return (
     <div className="flex items-center gap-2">
       <span className="hidden text-xs font-medium uppercase tracking-wider text-ink-500 sm:inline">Time zone</span>
-      <div className="w-56">
+      <div className="w-[8rem] sm:w-56">
         <Select value={zone} options={options} onChange={setZone} ariaLabel="Time zone" searchable searchPlaceholder="Search time zones" />
       </div>
     </div>

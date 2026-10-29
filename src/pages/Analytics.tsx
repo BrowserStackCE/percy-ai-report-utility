@@ -256,7 +256,7 @@ export default function Analytics() {
 
       {error ? (
         <Card className="p-5">
-          <p role="alert" className="text-sm font-medium text-red-600">
+          <p role="alert" className="text-sm font-medium text-danger-600">
             {error.message}
           </p>
           {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
@@ -428,7 +428,7 @@ export default function Analytics() {
 
           {snaps.error ? (
             <Card className="p-5">
-              <p role="alert" className="text-sm font-medium text-red-600">
+              <p role="alert" className="text-sm font-medium text-danger-600">
                 {snaps.error.message}
               </p>
               {snaps.error.hint && <p className="mt-1 text-sm text-ink-500">{snaps.error.hint}</p>}

@@ -64,10 +64,10 @@ export default function Login() {
       </p>
 
       {params.get("signedOut") === "1" && (
-        <p role="status" className="mt-4 text-sm text-green-700">You have been signed out.</p>
+        <p role="status" className="mt-4 text-sm text-mint-700">You have been signed out.</p>
       )}
       {params.get("error") === "callback" && (
-        <p role="alert" className="mt-4 text-sm text-red-600">The link from the terminal was invalid. Run the CLI again or sign in below.</p>
+        <p role="alert" className="mt-4 text-sm text-danger-600">The link from the terminal was invalid. Run the CLI again or sign in below.</p>
       )}
 
       <Card className="mt-4 p-4">
@@ -100,7 +100,7 @@ export default function Login() {
 function Feedback({ r }: { r: Result | null }) {
   if (!r) return null;
   return (
-    <p role={r.ok ? "status" : "alert"} className={r.ok ? "text-sm text-green-700" : "text-sm text-red-600"}>
+    <p role={r.ok ? "status" : "alert"} className={r.ok ? "text-sm text-mint-700" : "text-sm text-danger-600"}>
       {r.text}
       {r.hint && <span className="block text-ink-500">{r.hint}</span>}
     </p>

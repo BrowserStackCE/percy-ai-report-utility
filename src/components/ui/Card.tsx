@@ -3,7 +3,7 @@ import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border border-line bg-card", className)}>{children}</div>;
+  return <div className={cn("rounded-[var(--radius-card)] border border-line bg-card shadow-[var(--shadow-card)]", className)}>{children}</div>;
 }
 
 export function StatCard({ label, value, hint, info }: { label: string; value: ReactNode; hint: string; info?: string }) {
@@ -13,7 +13,7 @@ export function StatCard({ label, value, hint, info }: { label: string; value: R
         {label}
         {info && <InfoTip title={label}>{info}</InfoTip>}
       </div>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-ink-900">{value}</p>
+      <p className="mt-2 text-3xl font-semibold leading-none tracking-tight text-ink-900 tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-ink-400">{hint}</p>
     </Card>
   );

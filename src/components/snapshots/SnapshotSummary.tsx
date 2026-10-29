@@ -130,7 +130,7 @@ export function SnapshotSummary({
   if (error) {
     return (
       <Card className="p-5">
-        <p role="alert" className="text-sm font-medium text-red-600">{error.message}</p>
+        <p role="alert" className="text-sm font-medium text-danger-600">{error.message}</p>
         {error.hint && <p className="mt-1 text-sm text-ink-500">{error.hint}</p>}
         <div className="mt-3 flex gap-2">
           {error.kind === "not_authenticated" || error.kind === "unauthorized" ? (

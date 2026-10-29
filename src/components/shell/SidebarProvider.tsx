@@ -5,10 +5,12 @@ const STORAGE_KEY = "sidebar-collapsed";
 
 function readStored(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) return stored === "1";
   } catch {
-    return false;
+    // Storage may be unavailable in private or embedded contexts.
   }
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
 }
 
 /** Owns the sidebar's open/closed state and persists it across reloads. */

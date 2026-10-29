@@ -4,31 +4,41 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Primary (indigo-blue used for checks, radios, focus, selected states) */
-  --color-brand-50: #eef1fd;
-  --color-brand-100: #dfe5fb;
-  --color-brand-300: #8f9fee;
-  --color-brand-500: #3b53d9;
-  --color-brand-600: #2f43c0;
-  --color-brand-700: #2636a0;
+  /* BrowserStack-inspired visual language */
+  --color-brand-50: #f7effb;
+  --color-brand-100: #eedcf7;
+  --color-brand-300: #d2a0e5;
+  --color-brand-500: #9b4dca;
+  --color-brand-600: #843bb5;
+  --color-brand-700: #6d2d99;
+  --color-brand-gradient-start: #7445d7;
+  --color-brand-gradient-end: #a346bd;
+  --color-on-brand: #ffffff;
 
   /* Text and structure */
-  --color-ink-900: #14181f;
-  --color-ink-700: #333a46;
-  --color-ink-500: #5f6877;
-  --color-ink-400: #868e9c;
-  --color-ink-300: #b3b9c4;
-  --color-line: #e6e8ec;
-  --color-line-strong: #d5d9e0;
-  --color-page: #f6f5f4;
-  --color-surface: #f2f3f5;
-  --color-chip: #eef0f3;
+  --color-ink-900: #07172f;
+  --color-ink-700: #263750;
+  --color-ink-500: #626d80;
+  --color-ink-400: #8991a0;
+  --color-ink-300: #bbc1cb;
+  --color-line: #e8e9ed;
+  --color-line-strong: #d8dae2;
+  --color-page: #f5f5f7;
+  --color-surface: #f0f1f4;
+  --color-chip: #eceef2;
   --color-card: #ffffff;
   --color-skeleton-a: #eceef2;
-  --color-skeleton-b: #f6f7f9;
+  --color-skeleton-b: #f7f8fa;
 
   /* Shell */
-  --color-shell: #111827;
+  --color-shell: #07172f;
+
+  /* Shared shape and elevation tokens */
+  --radius-card: 0.75rem;
+  --radius-control: 0.375rem;
+  --shadow-card: 0 1px 2px rgb(7 23 47 / 0.04);
+  --shadow-card-raised: 0 8px 24px rgb(7 23 47 / 0.08);
+  --control-height: 2.25rem;
 
   /* Status */
   --color-mint-50: #e8f7ef;
@@ -39,7 +49,7 @@
   --color-warn-50: #fff4df;
   --color-warn-700: #94600a;
 
-  --shadow-popover: 0 8px 24px -4px rgb(17 24 39 / 0.14), 0 2px 6px rgb(17 24 39 / 0.06);
+  --shadow-popover: var(--shadow-card-raised), 0 2px 6px rgb(7 23 47 / 0.05);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* One motion speed for the whole UI (0.5s). Tailwind's transition utilities read these defaults. */
@@ -51,12 +61,15 @@
 /* Dark palette: the same tokens, re-pointed. Components never hard-code colours, so they follow. */
 .dark {
   color-scheme: dark;
-  --color-brand-50: #1b2347;
-  --color-brand-100: #232e5e;
-  --color-brand-300: #5c70dd;
-  --color-brand-500: #6b7ff0;
-  --color-brand-600: #8394f3;
-  --color-brand-700: #a9b5f7;
+  --color-brand-50: #291d36;
+  --color-brand-100: #39254a;
+  --color-brand-300: #a775c7;
+  --color-brand-500: #b968d7;
+  --color-brand-600: #c983e4;
+  --color-brand-700: #dda9ef;
+  --color-brand-gradient-start: #8066d9;
+  --color-brand-gradient-end: #b45bd0;
+  --color-on-brand: #ffffff;
 
   --color-ink-900: #eef0f4;
   --color-ink-700: #c9ced8;
@@ -71,6 +84,8 @@
   --color-card: #151a23;
   --color-skeleton-a: #1d2430;
   --color-skeleton-b: #283040;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.18);
+  --shadow-card-raised: 0 8px 24px rgb(0 0 0 / 0.35);
 
   --color-mint-50: #10281c;
   --color-mint-300: #2f7a52;
@@ -86,6 +101,7 @@
 html {
   /* Reserve scrollbar space so route changes never shift layout. */
   scrollbar-gutter: stable;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -94,6 +110,19 @@ body {
   color: var(--color-ink-900);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Core reusable primitives are centralized here instead of being duplicated in components. */
+.ui-button-primary {
+  background: linear-gradient(135deg, var(--color-brand-gradient-start), var(--color-brand-gradient-end));
+}
+
+.ui-button-primary:hover {
+  box-shadow: 0 5px 14px rgb(132 59 181 / 0.22);
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
 }
 
 /* Route transition: opacity only, no layout movement. */

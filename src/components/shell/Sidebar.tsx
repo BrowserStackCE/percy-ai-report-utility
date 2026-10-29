@@ -30,7 +30,7 @@ function SidebarNavItem({ to, icon, label, end, tag }: NavItemProps) {
       aria-label={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+          "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-200",
           isActive ? "bg-brand-50 text-brand-700" : "text-ink-700 hover:bg-chip",
         )
       }
@@ -65,17 +65,17 @@ export default function Sidebar() {
       id="app-sidebar"
       aria-label="Sidebar"
       className={cn(
-        "flex h-full shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-card transition-[width]",
-        collapsed ? "w-16" : "w-64",
+        "fixed inset-y-0 left-0 z-50 flex h-full w-[17rem] shrink-0 flex-col overflow-hidden border-r border-line bg-card/95 backdrop-blur transition-transform md:relative md:z-auto md:translate-x-0 md:border md:transition-[width]",
+        collapsed ? "-translate-x-full md:w-16" : "translate-x-0 md:w-64",
       )}
     >
       {/* Hamburger and brand. In the collapsed rail only the hamburger shows. */}
-      <div className={cn("flex h-14 shrink-0 items-center gap-2 px-3", collapsed && "justify-center")}>
+      <div className={cn("flex h-[68px] shrink-0 items-center gap-2 border-b border-line px-3", collapsed && "justify-center")}>
         <SidebarToggle />
         {!collapsed && (
-          <Link to="/" className="flex min-w-0 items-center gap-2" aria-label="Percy AI Review home">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label="Percy AI Review home">
             <img src={logo} alt="" className="h-7 w-7 shrink-0 rounded-md" />
-            <span className="truncate text-[15px] font-semibold tracking-tight text-ink-900">Percy AI Review</span>
+            <span className="truncate text-[15px] font-semibold tracking-[-0.01em] text-ink-900">Percy AI Review</span>
           </Link>
         )}
       </div>
