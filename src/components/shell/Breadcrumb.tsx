@@ -28,7 +28,9 @@ function useCrumbs(buildId: string | undefined): Crumb[] {
   }
   if (pathname === "/") return [projectsCrumb, { label: projectName ?? "Reports" }];
   if (pathname === "/projects") return [{ label: "Projects" }];
+  if (pathname === "/analytics") return [projectsCrumb, buildsCrumb, { label: "Analytics" }];
   if (pathname === "/login") return [projectsCrumb, { label: "Sign in" }];
+  if (pathname.startsWith("/auth/")) return [{ label: "Signing in" }];
   return [projectsCrumb, { label: "Not found" }];
 }
 
