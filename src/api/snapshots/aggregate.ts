@@ -159,7 +159,7 @@ export function aggregateSnapshots(snapshots: Snapshot[], topN = 5): SnapshotAgg
       const d = worstCmp?.device;
       top.push({
         snapshotId: s.id,
-        name: s.displayName ?? s.name,
+        name: s.name,
         ratio: worst,
         reviewState: s.reviewState,
         imageUrl: worstCmp?.imageUrl ?? null,

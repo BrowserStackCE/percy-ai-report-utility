@@ -13,7 +13,8 @@ export interface BuildSnapshots {
   snapshots: Snapshot[];
 }
 
-const label = (s: Snapshot) => s.displayName ?? s.name;
+/** Percy's `name` is the unique snapshot name; `display-name` is a build-wide label (identical for every snapshot here). */
+const label = (s: Snapshot) => s.name;
 
 /** The comparison with the largest diff, which stands for the snapshot. */
 function worstComparison(s: Snapshot): SnapshotComparison | null {
