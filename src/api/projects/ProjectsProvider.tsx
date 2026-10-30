@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
+import { clearDataCache } from "../dataCache";
 import { cacheOwner, clearProjectsCache, readProjectsCache, writeProjectsCache } from "./cache";
 import { listProjects } from "./projectsApi";
 import { projectsForScope, scopeOfCredentials, type CredentialScope } from "./scope";
@@ -44,6 +45,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   const hotReload = useCallback(() => {
     clearProjectsCache();
+    clearDataCache();
     bypassCache.current = true;
     // Drop the list on screen as well, so the page shows its loading state while Percy is asked again
     // instead of keeping the stale rows until the new ones arrive.

@@ -366,7 +366,7 @@ export default function BuildDetails() {
   const { formatDateTime, option } = useDateFormat();
   const [tab, setTab] = useState<ReportTab>("overview");
   // Only the Overview needs every snapshot, so the walk starts when that tab is open and the build is loaded.
-  const allSnapshots = useAllSnapshots(build && tab === "overview" ? build.id : "");
+  const allSnapshots = useAllSnapshots(build && tab === "overview" ? build.id : "", build?.totalSnapshots ?? 0);
 
   if (status === "loading") return <DetailsSkeleton />;
 
