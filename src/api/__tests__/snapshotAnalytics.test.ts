@@ -94,8 +94,8 @@ describe("C3 aiEffectiveness", () => {
   it("counts diffs cleared by AI and AI failures", () => {
     const ai = aiEffectiveness([
       snap("a", [
-        cmp({ diffRatio: 0.3, aiDiffRatio: 0, ai: { enabled: true, visualDiffs: 0, processingStatus: "completed", summary: null } }),
-        cmp({ diffRatio: 0.2, aiDiffRatio: 0.1, ai: { enabled: true, visualDiffs: 2, processingStatus: "completed", summary: null } }),
+        cmp({ diffRatio: 0.3, aiDiffRatio: 0, ai: { enabled: true, visualDiffs: 0, processingStatus: "completed", summary: null, findings: [] } }),
+        cmp({ diffRatio: 0.2, aiDiffRatio: 0.1, ai: { enabled: true, visualDiffs: 2, processingStatus: "completed", summary: null, findings: [] } }),
         cmp({ diffRatio: 0.2, aiFailureReason: "timeout" }),
       ]),
     ]);

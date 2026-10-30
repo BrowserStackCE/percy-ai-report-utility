@@ -133,7 +133,7 @@ describe("aggregateSnapshots", () => {
   });
 
   it("summarises Percy AI and the average noise it removed", () => {
-    const ai = { enabled: true, visualDiffs: 2, processingStatus: "completed", summary: "x" };
+    const ai = { enabled: true, visualDiffs: 2, processingStatus: "completed", summary: "x", findings: [] };
     const a = aggregateSnapshots([
       snap("1", [cmp({ ai, diffRatio: 0.1, aiDiffRatio: 0.04 })]),
       snap("2", [cmp({ ai: { ...ai, visualDiffs: 1 }, diffRatio: 0.06, aiDiffRatio: 0.06 })]),

@@ -5,6 +5,7 @@ import type {
   RawSnapshotsResponse,
   Snapshot,
   SnapshotAi,
+  SnapshotAiFinding,
   SnapshotComparison,
   SnapshotDevice,
   SnapshotReviewState,
@@ -43,14 +44,46 @@ function relId(rel: unknown): string | null {
   return id === undefined || id === null ? null : String(id);
 }
 
+/** Short summary of what the AI found: the titles of the changes it kept (not ignored). */
+function aiSummaryFrom(regions: unknown): string | null {
+  if (!Array.isArray(regions)) return null;
+  const titles = regions
+    .filter((r): r is Record<string, unknown> => isObject(r) && r.type === "ai" && r.ignored !== true)
+    .map((r) => str(r.change_title))
+    .filter((t): t is string => t !== null);
+  return titles.length > 0 ? titles.join("; ") : null;
+}
+
+function findingsFrom(regions: unknown): SnapshotAiFinding[] {
+  if (!Array.isArray(regions)) return [];
+  return regions
+    .filter((r): r is Record<string, unknown> => isObject(r) && r.type === "ai")
+    .map((r) => ({
+      title: str(r.change_title),
+      description: str(r.change_description),
+      reason: str(r.change_reason),
+      changeType: str(r.change_type),
+      ignored: r.ignored === true,
+    }));
+}
+
 function mapAi(a: Record<string, unknown>): SnapshotAi | null {
-  const d = a["ai-details"];
-  if (!isObject(d)) return null;
+  const d = isObject(a["ai-details"]) ? a["ai-details"] : {};
+  const state = str(a["ai-processing-state"]);
+  // Percy sends total-ai-visual-diffs (legacy fixtures used ai-visual-diffs / ai-enabled).
+  const visualDiffs = num(d["total-ai-visual-diffs"]) ?? num(d["ai-visual-diffs"]);
+  const ran =
+    d["ai-enabled"] === true ||
+    (state !== null && state !== "ai_not_run" && state !== "not_run") ||
+    num(a["ai-diff-ratio"]) !== null ||
+    visualDiffs !== null;
+  if (!ran) return null;
   return {
-    enabled: d["ai-enabled"] === true,
-    visualDiffs: num(d["ai-visual-diffs"]),
-    processingStatus: str(d["ai-processing-status"]),
-    summary: str(d["ai-summary"]),
+    enabled: true,
+    visualDiffs,
+    processingStatus: str(d["ai-processing-status"]) ?? state,
+    summary: str(d["ai-summary"]) ?? aiSummaryFrom(a["applied-regions"]),
+    findings: findingsFrom(a["applied-regions"]),
   };
 }
 
@@ -68,6 +101,24 @@ function mapDevice(tag: RawResource | undefined): SnapshotDevice | null {
   };
 }
 
+/** Web builds carry the browser as comparison -> browser -> browser-family instead of a comparison tag. */
+function mapBrowser(browser: RawResource | undefined, res: Map<string, RawResource>): SnapshotDevice | null {
+  if (!browser) return null;
+  const familyId = relId((browser.relationships ?? {})["browser-family"]);
+  const family = familyId ? res.get(`browser-families:${familyId}`) : undefined;
+  const browserName = str(family?.attributes?.name) ?? str(family?.attributes?.slug);
+  if (!browserName) return null;
+  return {
+    name: null,
+    osName: null,
+    osVersion: null,
+    browserName,
+    browserVersion: str(browser.attributes?.version),
+    orientation: null,
+    resolution: null,
+  };
+}
+
 function mapComparison(raw: RawResource, res: Map<string, RawResource>): SnapshotComparison | null {
   if (raw.id === undefined || raw.id === null) return null;
   const a = raw.attributes ?? {};
@@ -79,6 +130,8 @@ function mapComparison(raw: RawResource, res: Map<string, RawResource>): Snapsho
   const imageId = relId((screenshot?.relationships ?? {})["image"]);
   const image = imageId ? res.get(`images:${imageId}`) : undefined;
   const tagId = relId(rels["comparison-tag"]);
+  const browserId = relId(rels["browser"]);
+  const browserDevice = mapBrowser(browserId ? res.get(`browsers:${browserId}`) : undefined, res);
 
   return {
     id: String(raw.id),
@@ -94,7 +147,7 @@ function mapComparison(raw: RawResource, res: Map<string, RawResource>): Snapsho
     imageUrl: str(image?.attributes?.url),
     imageWidth: num(image?.attributes?.width),
     imageHeight: num(image?.attributes?.height),
-    device: mapDevice(tagId ? res.get(`comparison-tags:${tagId}`) : undefined),
+    device: mapDevice(tagId ? res.get(`comparison-tags:${tagId}`) : undefined) ?? browserDevice,
   };
 }
 
