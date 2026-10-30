@@ -10,7 +10,7 @@ import {
 } from "../../api/snapshots/aggregate";
 import type { SnapshotReviewState } from "../../api/snapshots/types";
 import { count } from "../../lib/format";
-import { Button, Card, CardSkeleton, Skeleton, StackedBar, StatCard, StatusPill, Widget, buttonClass, type Segment } from "../ui";
+import { Button, Card, CardSkeleton, ProgressBar, Skeleton, StackedBar, StatCard, StatusPill, Widget, buttonClass, type Segment } from "../ui";
 import { useMemo } from "react";
 import { formatRatio } from "./SnapshotsSection";
 
@@ -124,7 +124,8 @@ export function SnapshotSummary({
   buildTotal: number | null;
   buildId: string;
 }) {
-  const { snapshots, status, error, pagesLoaded, truncated, reload } = state;
+  const { snapshots, status, error, truncated, reload } = state;
+  const expected = buildTotal ?? state.expectedTotal;
   const a = useMemo(() => aggregateSnapshots(snapshots), [snapshots]);
 
   if (error) {
@@ -145,7 +146,8 @@ export function SnapshotSummary({
 
   if (status === "loading" && snapshots.length === 0) {
     return (
-      <div className="space-y-4" role="status" aria-label="Loading report">
+      <div className="space-y-4" aria-label="Loading report">
+        <ProgressBar value={0} max={expected} label={expected > 0 ? `Loading snapshots… 0 of ${count(expected)}` : "Loading snapshots…"} />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
             <CardSkeleton key={i} />
@@ -187,11 +189,16 @@ export function SnapshotSummary({
 
   return (
     <div className="fade-in space-y-4">
-      {(loadingMore || truncated) && (
+      {loadingMore && (
+        <ProgressBar
+          value={a.snapshots}
+          max={expected}
+          label={`Loading snapshots… ${count(a.snapshots)}${expected > 0 ? ` of ${count(expected)}` : ""}. Totals update as pages arrive.`}
+        />
+      )}
+      {!loadingMore && truncated && (
         <p role="status" className="text-xs text-ink-500">
-          {loadingMore
-            ? `Still loading: ${count(a.snapshots)} snapshots so far (${pagesLoaded} pages). Totals update as pages arrive.`
-            : `Report covers the first ${count(a.snapshots)} snapshots of this build. Open the build in Percy for the rest.`}
+          Report covers the first {count(a.snapshots)} snapshots of this build. Open the build in Percy for the rest.
         </p>
       )}
 

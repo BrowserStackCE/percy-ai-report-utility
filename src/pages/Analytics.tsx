@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
-import { MAX_ANALYTICS_PAGES, useAllBuilds } from "../api/builds/useAllBuilds";
+import { BUILD_COUNT_OPTIONS, DEFAULT_ANALYTICS_BUILDS, useAllBuilds } from "../api/builds/useAllBuilds";
 import {
   buildTrend,
   failureAnalysis,
@@ -24,7 +24,7 @@ import {
   type NoisySnapshot,
   type TestCaseRow,
 } from "../api/snapshots/analytics";
-import { SNAPSHOT_PAGES_PER_BUILD, SNAPSHOT_REPORT_BUILDS, useProjectSnapshots } from "../api/snapshots/useProjectSnapshots";
+import { DEFAULT_SNAPSHOT_REPORT_BUILDS, MAX_SNAPSHOTS_PER_BUILD, useProjectSnapshots } from "../api/snapshots/useProjectSnapshots";
 import type { Build } from "../api/builds/types";
 import { isRetryable } from "../api/errors";
 import { useProjects } from "../api/projects/useProjects";
@@ -41,6 +41,8 @@ import {
   LoadingOverlay,
   PageContainer,
   PageHeader,
+  ProgressBar,
+  Select,
   StatusPill,
   TableSkeleton,
   Widget,
@@ -89,7 +91,10 @@ function Section({ id, title, info, children }: { id: string; title: string; inf
 export default function Analytics() {
   const { projectId } = useSelectedProject();
   const { projects } = useProjects();
-  const { status, builds, error, truncated, pagesLoaded, reload } = useAllBuilds(projectId);
+  // How many builds each report includes (max 10). Changing it, or a hot reload, is the only time Percy is called again.
+  const [buildCount, setBuildCount] = useState<string>(String(DEFAULT_ANALYTICS_BUILDS));
+  const [snapshotBuildCount, setSnapshotBuildCount] = useState<string>(String(DEFAULT_SNAPSHOT_REPORT_BUILDS));
+  const { status, builds, error, truncated, pagesLoaded, reload } = useAllBuilds(projectId, Number(buildCount));
   const { formatDateTime, zone } = useDateFormat();
 
   const trend = useMemo(() => buildTrend(builds), [builds]);
@@ -100,7 +105,7 @@ export default function Analytics() {
   const reviewers = useMemo(() => reviewerWorkload(builds), [builds]);
 
   // Snapshot reports (C1–C8): the newest finished builds, with their snapshots and comparisons.
-  const snaps = useProjectSnapshots(projectId);
+  const snaps = useProjectSnapshots(projectId, Number(snapshotBuildCount));
   const allSnapshots = useMemo(() => snaps.builds.flatMap((b) => b.snapshots), [snaps.builds]);
   const noisy = useMemo(() => noisiestSnapshots(snaps.builds), [snaps.builds]);
   const distribution = useMemo(() => diffDistribution(allSnapshots), [allSnapshots]);
@@ -243,9 +248,17 @@ export default function Analytics() {
     <PageContainer>
       <PageHeader
         title="Build analytics"
-        description={`Trends across ${project ? project.name : "the selected project"} builds from the last 30 days.`}
+        description={`Trends across the newest ${buildCount} ${project ? project.name : "project"} builds from the last 30 days.`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-40">
+              <Select
+                value={buildCount}
+                options={BUILD_COUNT_OPTIONS.map((n) => ({ value: String(n), label: `Last ${n} builds` }))}
+                onChange={setBuildCount}
+                ariaLabel="Number of builds to include"
+              />
+            </div>
             <Button onClick={reload}>Refresh</Button>
             <Link to="/" className={buttonClass("secondary")}>
               Back to reports
@@ -279,14 +292,11 @@ export default function Analytics() {
       ) : (
         <div className="space-y-8">
           {status === "loading" && (
-            <p className="text-sm text-ink-500" role="status">
-              Loading more builds… ({pagesLoaded} page{pagesLoaded === 1 ? "" : "s"} so far)
-            </p>
+            <ProgressBar value={builds.length} max={Number(buildCount)} label={`Loading builds… ${builds.length} of up to ${buildCount} (${pagesLoaded} page${pagesLoaded === 1 ? "" : "s"})`} />
           )}
           {truncated && (
             <p className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-700" role="note">
-              Showing the newest {builds.length} builds (first {MAX_ANALYTICS_PAGES} pages). Older builds in the 30-day window were not
-              included.
+              Showing the newest {builds.length} builds. Pick a higher build count (max 10) to include more.
             </p>
           )}
 
@@ -421,9 +431,19 @@ export default function Analytics() {
           {/* Snapshot reports (C1–C8) */}
           <div className="border-t border-line pt-8">
             <h2 className="text-xl font-semibold text-ink-900">Snapshot analytics</h2>
-            <p className="text-sm text-ink-500">
-              Based on the {SNAPSHOT_REPORT_BUILDS} newest finished builds, up to {SNAPSHOT_PAGES_PER_BUILD * 30} snapshots each.
-            </p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <p className="text-sm text-ink-500">
+                Based on the {snapshotBuildCount} newest finished builds, up to {MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} snapshots each.
+              </p>
+              <div className="w-40">
+                <Select
+                  value={snapshotBuildCount}
+                  options={BUILD_COUNT_OPTIONS.map((n) => ({ value: String(n), label: `Last ${n} builds` }))}
+                  onChange={setSnapshotBuildCount}
+                  ariaLabel="Number of builds for snapshot analytics"
+                />
+              </div>
+            </div>
           </div>
 
           {snaps.error ? (
@@ -439,21 +459,30 @@ export default function Analytics() {
               )}
             </Card>
           ) : snaps.status === "loading" && snaps.builds.length === 0 ? (
-            <LoadingOverlay label="Loading snapshots">
-              <TableSkeleton rows={4} cols={5} />
-            </LoadingOverlay>
+            <div className="space-y-4">
+              <ProgressBar
+                value={snaps.snapshotsLoaded}
+                max={snaps.snapshotsExpected}
+                label={snaps.snapshotsExpected > 0 ? `Loading snapshots… ${snaps.snapshotsLoaded.toLocaleString()} of ${snaps.snapshotsExpected.toLocaleString()}` : "Finding builds…"}
+              />
+              <LoadingOverlay label="Loading snapshots">
+                <TableSkeleton rows={4} cols={5} />
+              </LoadingOverlay>
+            </div>
           ) : allSnapshots.length === 0 ? (
             <EmptyState title="No snapshots to analyse" description="There are no finished builds with snapshots for this project yet." />
           ) : (
             <div className="space-y-8">
               {snaps.status === "loading" && (
-                <p className="text-sm text-ink-500" role="status">
-                  Loading snapshots… ({snaps.buildsLoaded} of {snaps.buildsTotal} builds)
-                </p>
+                <ProgressBar
+                  value={snaps.snapshotsLoaded}
+                  max={snaps.snapshotsExpected}
+                  label={`Loading snapshots… ${snaps.snapshotsLoaded.toLocaleString()} of ${snaps.snapshotsExpected.toLocaleString()} (${snaps.buildsLoaded} of ${snaps.buildsTotal} builds)`}
+                />
               )}
               {snaps.truncated && (
                 <p className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-700" role="note">
-                  Some builds have more than {SNAPSHOT_PAGES_PER_BUILD * 30} snapshots, so only the first {SNAPSHOT_PAGES_PER_BUILD * 30} of each were included.
+                  Some builds have more than {MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} snapshots, so only the first {MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} of each were included.
                 </p>
               )}
 
