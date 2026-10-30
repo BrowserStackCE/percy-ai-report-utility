@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { isRetryable } from "../../api/errors";
 import { useSnapshots } from "../../api/snapshots/useSnapshots";
-import type { Snapshot, SnapshotComparison, SnapshotReviewState } from "../../api/snapshots/types";
+import type { Snapshot, SnapshotAi, SnapshotComparison, SnapshotReviewState } from "../../api/snapshots/types";
 import { count, humanize } from "../../lib/format";
 import {
   Button,
   Card,
   Chip,
   DataTable,
+  Drawer,
   External,
   LoadingOverlay,
   Pagination,
@@ -81,9 +82,10 @@ function SnapshotRow({ s }: { s: Snapshot }) {
         {c?.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover object-top" />}
       </div>
       <div className="min-w-0">
-        <p className="truncate font-semibold text-ink-900" title={s.displayName ?? s.name}>
-          {s.displayName ?? s.name}
+        <p className="truncate font-semibold text-ink-900" title={s.name}>
+          {s.name}
         </p>
+        {s.displayName && s.displayName !== s.name && <p className="mt-0.5 truncate text-xs text-ink-500">{s.displayName}</p>}
         {s.testCaseName && <p className="mt-0.5 truncate text-xs text-ink-500">{s.testCaseName}</p>}
         <div className="mt-1 flex flex-wrap gap-1.5">
           {s.isReintroduced && <Chip>Reintroduced</Chip>}
@@ -96,7 +98,55 @@ function SnapshotRow({ s }: { s: Snapshot }) {
   );
 }
 
-const columns: Column<Snapshot>[] = [
+/** The AI result worth showing for a snapshot: the first comparison where Percy AI ran, with the most findings. */
+function aiOf(s: Snapshot): SnapshotAi | null {
+  let best: SnapshotAi | null = null;
+  for (const c of s.comparisons) {
+    if (c.ai?.enabled && (!best || c.ai.findings.length > best.findings.length)) best = c.ai;
+  }
+  return best;
+}
+
+/** Full text of what Percy AI reported for one snapshot, shown in the right-hand drawer. */
+function AiDetails({ s }: { s: Snapshot }) {
+  const ai = aiOf(s);
+  if (!ai) return <p className="text-sm text-ink-500">Percy AI did not run for this snapshot.</p>;
+  const kept = ai.findings.filter((f) => !f.ignored);
+  const ignored = ai.findings.filter((f) => f.ignored);
+  const Finding = ({ f }: { f: SnapshotAi["findings"][number] }) => (
+    <li className="rounded-lg border border-line p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-ink-900">{f.title ?? "Untitled change"}</p>
+        {f.changeType && <Chip>{f.changeType}</Chip>}
+      </div>
+      {f.description && <p className="mt-1.5 whitespace-pre-wrap text-sm text-ink-700">{f.description}</p>}
+      {f.reason && <p className="mt-1.5 whitespace-pre-wrap text-xs text-ink-500">{f.reason}</p>}
+    </li>
+  );
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-ink-700">
+        <span className="font-semibold tabular-nums">{count(ai.visualDiffs)}</span> visual diffs kept by Percy AI
+        {ai.processingStatus ? ` · ${humanize(ai.processingStatus)}` : ""}
+      </p>
+      {ai.findings.length === 0 && ai.summary && <p className="whitespace-pre-wrap text-sm text-ink-700">{ai.summary}</p>}
+      {kept.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Changes to review</h3>
+          <ul className="space-y-2">{kept.map((f, i) => <Finding key={i} f={f} />)}</ul>
+        </section>
+      )}
+      {ignored.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Ignored as noise</h3>
+          <ul className="space-y-2">{ignored.map((f, i) => <Finding key={i} f={f} />)}</ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+const makeColumns = (openAi: (s: Snapshot) => void): Column<Snapshot>[] => [
   { key: "snapshot", header: "Snapshot", className: "max-w-sm", render: (s) => <SnapshotRow s={s} /> },
   {
     key: "review",
@@ -130,13 +180,18 @@ const columns: Column<Snapshot>[] = [
     info: "What the Percy AI Review Agent found for this snapshot: visual diffs it kept and a short summary.",
     className: "max-w-xs",
     render: (s) => {
-      const ai = s.comparisons.map((c) => c.ai).find((a) => a?.enabled) ?? null;
+      const ai = aiOf(s);
       if (!ai) return <span className="text-sm text-ink-400">Not run</span>;
       return (
-        <div className="text-sm">
-          <p className="tabular-nums text-ink-900">{count(ai.visualDiffs)} visual diffs</p>
-          {ai.summary && <p className="mt-0.5 line-clamp-2 text-xs text-ink-500">{ai.summary}</p>}
-        </div>
+        <button
+          type="button"
+          onClick={() => openAi(s)}
+          aria-label={`Open Percy AI details for ${s.name}`}
+          className="group inline-flex items-center gap-1.5 rounded-md text-sm text-ink-900 hover:text-brand-600"
+        >
+          <span className="tabular-nums">{count(ai.visualDiffs)} visual diffs</span>
+          <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">›</span>
+        </button>
       );
     },
   },
@@ -171,6 +226,8 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
   );
   const { status, snapshots, error, page, hasNext, hasPrev, loadingPage, next, prev, reload } = useSnapshots(buildId, filters);
   const filtered = applied !== "" || reason !== "all";
+  const [aiFor, setAiFor] = useState<Snapshot | null>(null);
+  const columns = useMemo(() => makeColumns(setAiFor), []);
 
   return (
     <section aria-labelledby="snapshots-heading" className="space-y-4">
@@ -303,6 +360,9 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
           )}
         </>
       )}
+      <Drawer open={aiFor !== null} onClose={() => setAiFor(null)} title={aiFor ? `Percy AI · ${aiFor.name}` : "Percy AI"} widthClassName="w-[32rem]">
+        {aiFor && <AiDetails s={aiFor} />}
+      </Drawer>
     </section>
   );
 }
