@@ -67,7 +67,9 @@ function ProjectRow({ project, selected, onOpen }: { project: Project; selected:
           }}
           className="block w-full max-w-[15rem] text-left"
         >
-          <span className="text-base font-semibold text-ink-900 hover:text-brand-600">{project.name}</span>
+          <span className="block truncate text-base font-semibold text-ink-900 hover:text-brand-600" title={project.name}>
+            {project.name}
+          </span>
           {/* Percy's URL id for the project. The account prefix of the full slug is the same on every row, so it is left out. */}
           <Truncate className="mt-0.5 font-mono text-xs text-ink-500">{project.slug}</Truncate>
         </button>

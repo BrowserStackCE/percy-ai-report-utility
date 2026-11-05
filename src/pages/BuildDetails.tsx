@@ -10,22 +10,34 @@ import { SnapshotSummary } from "../components/snapshots/SnapshotSummary";
 import { ReportHeader } from "../components/report/ReportHeader";
 import { useAllSnapshots } from "../api/snapshots/useAllSnapshots";
 import {
+  AccentStat,
   ArrowLeft,
+  Bug,
   Button,
+  Calendar,
   Card,
   CardSkeleton,
   Chip,
+  Clock,
+  GitBranch,
+  Layers,
   LoadingOverlay,
   PageContainer,
   PageHeader,
+  Pulse,
   Skeleton,
   SkeletonLines,
+  Sparkles,
   StackedBar,
   StatCard,
   StatusPill,
   TabBar,
+  User,
   Widget,
+  accentStyles,
   buttonClass,
+  cn,
+  type AccentTone,
   type Segment,
 } from "../components/ui";
 
@@ -54,18 +66,73 @@ interface FactGroup {
  * with the label in bold. The rest are listed once at the end of the tab by <NotReturnedCard>, so a
  * gap is never mistaken for a real value.
  */
-function Facts({ rows }: { rows: Row[] }) {
+function Facts({ rows, tone = "brand" }: { rows: Row[]; tone?: AccentTone }) {
   const present = rows.filter(([, v]) => !isMissing(v));
   if (present.length === 0) return <p className="text-sm text-ink-400">Nothing returned for this section.</p>;
+  const a = accentStyles[tone];
   return (
-    <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 text-sm sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:items-center">
+    <dl className="grid grid-cols-1 gap-2.5 text-sm sm:grid-cols-2">
       {present.map(([label, value]) => (
-        <div key={label} className="grid gap-0.5 border-b border-line pb-2 last:border-b-0 last:pb-0 sm:contents sm:border-0">
-          <dt className="font-semibold text-ink-700">{label}</dt>
-          <dd className="min-w-0 break-words text-ink-900">{value}</dd>
+        <div key={label} className={cn("relative min-w-0 overflow-hidden rounded-lg border bg-card px-3.5 py-2.5 pl-4", a.border)}>
+          <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-1", a.bar)} />
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">{label}</dt>
+          <dd className="mt-0.5 min-w-0 break-words font-medium text-ink-900">{value}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+/** A details card: coloured icon chip and title in a tinted header, content below. */
+function DetailSection({
+  title,
+  info,
+  tone,
+  icon,
+  children,
+}: {
+  title: string;
+  info?: string;
+  tone: AccentTone;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  const a = accentStyles[tone];
+  return (
+    <section className="overflow-hidden rounded-xl border border-line bg-card shadow-[var(--shadow-card)]">
+      <header className={cn("flex items-center gap-3 border-b px-5 py-3", a.surface, a.border)}>
+        <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-on-brand)]", a.chip)}>{icon}</span>
+        <div className="min-w-0">
+          <h2 className={cn("text-[15px] font-semibold", a.text)}>{title}</h2>
+          {info && <p className="truncate text-xs text-ink-500" title={info}>{info}</p>}
+        </div>
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+/** Vertical timeline of when the build happened, oldest first. Skips timestamps Percy did not send. */
+function BuildTimeline({ b, formatDateTime }: { b: Build; formatDateTime: (iso: string | null) => string }) {
+  const steps: { label: string; at: string | null; tone: AccentTone }[] = [
+    { label: "CLI started", at: b.cliStartedAt, tone: "info" },
+    { label: "Build created", at: b.createdAt, tone: "brand" },
+    { label: "CI finalized", at: b.finalizedAt, tone: "teal" },
+    { label: "Percy finished", at: b.finishedAt, tone: "mint" },
+    { label: "Approved", at: b.approvedAt, tone: "mint" },
+  ];
+  const shown = steps.filter((s) => s.at);
+  if (shown.length === 0) return null;
+  return (
+    <ol className="relative ml-2 space-y-4 border-l-2 border-line pl-6">
+      {shown.map((s) => (
+        <li key={s.label} className="relative">
+          <span aria-hidden="true" className={cn("absolute -left-[33px] top-1 h-3 w-3 rounded-full ring-4 ring-card", accentStyles[s.tone].bar)} />
+          <p className="text-sm font-semibold text-ink-900">{s.label}</p>
+          <p className="text-xs text-ink-500">{formatDateTime(s.at)}</p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -494,96 +561,135 @@ export default function BuildDetails() {
         <SnapshotsSection buildId={b.id} percyUrl={b.percyUrl} />
       </LazyTab>
 
-      <LazyTab
-        id="details"
-        active={tab === "details"}
-        label="Loading build details"
-        className="gap-4 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid"
-      >
-        <Widget title="Review progress" info="Snapshots reviewed vs still waiting for a decision.">
-          <StackedBar segments={reviewSegments} />
-          <ul className="mt-4 space-y-2 text-sm">
-            {reviewSegments.map((s) => (
-              <li key={s.key} className="flex items-center gap-3">
-                <span className={`h-2 w-2 rounded-full ${s.color}`} />
-                <span className="flex-1 text-ink-700">{s.label}</span>
-                <span className="tabular-nums text-ink-900">{count(s.value)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-5">
-            <Facts rows={g.review} />
-          </div>
-        </Widget>
+      <LazyTab id="details" active={tab === "details"} label="Loading build details" className="space-y-5">
+        {/* Report summary: the headline numbers of the build in coloured tiles. */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <AccentStat
+            tone={b.state === "failed" ? "danger" : b.state === "finished" ? "mint" : "warn"}
+            icon={<Pulse size={16} />}
+            label="Build status"
+            value={humanize(b.state)}
+            hint={b.reviewState ? `Review: ${humanize(b.reviewState)}` : "Review state not returned"}
+          />
+          <AccentStat
+            tone="info"
+            icon={<Layers size={16} />}
+            label="Snapshots"
+            value={count(b.totalSnapshots)}
+            hint={`${count(b.totalComparisons)} comparisons · ${count(b.comparisonsWithDiffs)} with diffs`}
+          />
+          <AccentStat
+            tone="warn"
+            icon={<Clock size={16} />}
+            label="Percy processing"
+            value={formatDuration(b.processingSeconds)}
+            hint={b.averageSeconds !== null ? `Average build ${formatDuration(b.averageSeconds)}` : "Average not returned"}
+          />
+          <AccentStat
+            tone={ai?.enabled ? "brand" : "teal"}
+            icon={<Sparkles size={16} />}
+            label="Percy AI"
+            value={ai?.enabled ? count(ai.aiVisualDiffs) : "Off"}
+            hint={ai?.enabled ? `${count(ai.potentialBugs)} potential bugs · ${count(ai.diffsReduced)} diffs reduced` : "Not enabled for this build"}
+          />
+        </div>
 
-        <Widget title="Source" info="Where this build came from.">
-          <Facts rows={g.source} />
-        </Widget>
-
-        <Widget
-          title="Timing"
-          info={`When the build ran and how long Percy took. All times are shown in ${option.label}; change the time zone from the picker at the top of the page.`}
-        >
-          <Facts rows={g.timing} />
-        </Widget>
-
-        <Widget
-          title="Percy AI"
-          info="Results from the Percy AI Review Agent: how many diffs it flagged as potential bugs, how many it filtered out as noise, and whether its summary and remediation steps ran."
-        >
-          {ai?.enabled ? (
-            <>
-              <StackedBar segments={aiSegments(b)} />
-              <div className="mt-4">
-                <Facts rows={g.aiCounts} />
-              </div>
-              <div className="mt-5">
-                <Facts rows={g.aiSummary} />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-ink-500">Percy AI is not enabled for this build.</p>
-          )}
-        </Widget>
-
-        <Widget
-          title="Comparisons"
-          info="A comparison is one snapshot rendered in one browser at one width and checked against the base build. This breaks down how many finished, how many differ, and how many SmartSnap skipped."
-        >
-          <Facts rows={g.comparisons} />
-        </Widget>
-
-        {hasTestCases && (
-          <Widget
-            title="Test cases"
-            info="Test cases reported by BrowserStack Test Observability (TestHub) for this build, with how many still need review or failed."
-          >
-            <Facts rows={g.testCases} />
-          </Widget>
-        )}
-
-        <Widget
-          title="Run details"
-          info="How this build was produced: the Percy client that uploaded it, whether it was split across parallel shards, and its build type."
-        >
-          <Facts rows={g.run} />
-          {b.featureInteractions.length > 0 && (
+        <div className="grid items-start gap-5 lg:grid-cols-2">
+          <DetailSection title="Review progress" tone="mint" icon={<Sparkles size={16} />} info="Snapshots reviewed vs still waiting for a decision.">
+            <StackedBar segments={reviewSegments} />
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+              {reviewSegments.map((s) => (
+                <li key={s.key} className="rounded-lg border border-line bg-surface/60 px-3 py-2">
+                  <span className="flex items-center gap-2 text-xs text-ink-500">
+                    <span className={`h-2.5 w-2.5 rounded-full ${s.color}`} />
+                    {s.label}
+                  </span>
+                  <span className="mt-0.5 block text-xl font-semibold tabular-nums text-ink-900">{count(s.value)}</span>
+                </li>
+              ))}
+            </ul>
             <div className="mt-5">
-              <p className="mb-2 text-sm font-semibold text-ink-700">State-changing feature interactions</p>
-              <div className="flex flex-wrap gap-2">
-                {b.featureInteractions.map((f) => (
-                  <Chip key={f}>{f}</Chip>
-                ))}
-              </div>
+              <Facts rows={g.review} tone="mint" />
             </div>
-          )}
-        </Widget>
+          </DetailSection>
 
-        {b.figma && (
-          <Widget title="Figma" info="The Figma design file this build was compared against, and the flow used.">
-            <Facts rows={g.figma} />
-          </Widget>
-        )}
+          <DetailSection
+            title="Timeline"
+            tone="info"
+            icon={<Calendar size={16} />}
+            info={`All times are shown in ${option.label}; change the time zone from the picker at the top of the page.`}
+          >
+            <BuildTimeline b={b} formatDateTime={formatDateTime} />
+            <div className="mt-5">
+              <Facts rows={g.timing} tone="info" />
+            </div>
+          </DetailSection>
+
+          <DetailSection title="Source" tone="brand" icon={<GitBranch size={16} />} info="Where this build came from.">
+            <Facts rows={g.source} tone="brand" />
+          </DetailSection>
+
+          <DetailSection
+            title="Percy AI"
+            tone="brand"
+            icon={<Sparkles size={16} />}
+            info="Results from the Percy AI Review Agent: diffs flagged as potential bugs, diffs filtered as noise, and whether its summary and remediation ran."
+          >
+            {ai?.enabled ? (
+              <>
+                <StackedBar segments={aiSegments(b)} />
+                <div className="mt-4">
+                  <Facts rows={g.aiCounts} tone="brand" />
+                </div>
+                <div className="mt-4">
+                  <Facts rows={g.aiSummary} tone="teal" />
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-ink-500">Percy AI is not enabled for this build.</p>
+            )}
+          </DetailSection>
+
+          <DetailSection
+            title="Comparisons"
+            tone="warn"
+            icon={<Layers size={16} />}
+            info="One snapshot rendered in one browser at one width and checked against the base build."
+          >
+            <Facts rows={g.comparisons} tone="warn" />
+          </DetailSection>
+
+          {hasTestCases && (
+            <DetailSection title="Test cases" tone="teal" icon={<Bug size={16} />} info="Test cases reported by BrowserStack Test Observability (TestHub) for this build.">
+              <Facts rows={g.testCases} tone="teal" />
+            </DetailSection>
+          )}
+
+          <DetailSection
+            title="Run details"
+            tone="info"
+            icon={<User size={16} />}
+            info="How this build was produced: the Percy client, parallel shards and build type."
+          >
+            <Facts rows={g.run} tone="info" />
+            {b.featureInteractions.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-2 text-sm font-semibold text-ink-700">State-changing feature interactions</p>
+                <div className="flex flex-wrap gap-2">
+                  {b.featureInteractions.map((f) => (
+                    <Chip key={f}>{f}</Chip>
+                  ))}
+                </div>
+              </div>
+            )}
+          </DetailSection>
+
+          {b.figma && (
+            <DetailSection title="Figma" tone="danger" icon={<Layers size={16} />} info="The Figma design file this build was compared against.">
+              <Facts rows={g.figma} tone="danger" />
+            </DetailSection>
+          )}
+        </div>
 
         <NotReturnedCard groups={detailTitles} />
       </LazyTab>

@@ -57,7 +57,9 @@ export function Select<T extends string>({
             className,
           )}
         >
-          <span className={cn("min-w-0 flex-1 truncate text-left", !current && "text-ink-400")}>{current?.label ?? placeholder ?? ""}</span>
+          <span className={cn("min-w-0 flex-1 truncate text-left", !current && "text-ink-400")} title={current?.label}>
+            {current?.label ?? placeholder ?? ""}
+          </span>
           {variant === "field" ? <ChevronsUpDown size={16} className="shrink-0 text-ink-400" /> : <ChevronDown size={16} className="shrink-0 text-ink-400" />}
         </button>
       )}
@@ -81,6 +83,7 @@ export function Select<T extends string>({
               <li key={o.value} role="option" aria-selected={o.value === value}>
                 <button
                   type="button"
+                  title={o.label}
                   onClick={() => {
                     onChange(o.value);
                     setQuery("");
