@@ -3,7 +3,7 @@ export * from "./Icons";
 export { Button, IconButton, buttonClass } from "./Button";
 export { StatusPill, ClassificationBadge, NewTag, classificationLabels } from "./Badge";
 export { Chip, Kbd } from "./Chip";
-export { Card, StatCard, Eyebrow, Notice } from "./Card";
+export { Card, StatCard, AccentStat, SectionBanner, Eyebrow, Notice, accentStyles, type AccentTone } from "./Card";
 export { Checkbox, Radio, SearchInput, TextField } from "./Inputs";
 export { Popover } from "./Popover";
 export { InfoTip } from "./InfoTip";
@@ -22,6 +22,7 @@ export { Drawer } from "./Drawer";
 export { PageContainer } from "./PageContainer";
 export { Truncate } from "./Truncate";
 export { Pagination } from "./Pagination";
+export { ProgressBar } from "./ProgressBar";
 export { Skeleton, SkeletonLines, LogoLoader, LoadingOverlay, TableSkeleton, CardSkeleton } from "./Loading";
 export { HamburgerIcon } from "./HamburgerIcon";
 

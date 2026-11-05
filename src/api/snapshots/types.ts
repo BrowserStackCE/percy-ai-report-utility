@@ -46,11 +46,24 @@ export interface RawSnapshotsResponse {
 
 export type SnapshotReviewState = "unreviewed" | "approved" | "changes_requested" | "merged" | "rejected" | "unknown";
 
+/** One change Percy AI found on a comparison (an entry of `applied-regions`). */
+export interface SnapshotAiFinding {
+  title: string | null;
+  description: string | null;
+  reason: string | null;
+  changeType: string | null;
+  /** True when the AI judged the change noise and ignored it. */
+  ignored: boolean;
+}
+
 export interface SnapshotAi {
   enabled: boolean;
   visualDiffs: number | null;
   processingStatus: string | null;
+  /** Titles of the kept changes joined into one line. */
   summary: string | null;
+  /** Every change the AI reported, with its full text. */
+  findings: SnapshotAiFinding[];
 }
 
 export interface SnapshotDevice {

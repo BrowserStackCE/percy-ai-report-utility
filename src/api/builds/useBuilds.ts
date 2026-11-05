@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
+import { cacheKey, onDataCacheCleared, readCache, writeCache } from "../dataCache";
 import { fetchBuildsPage } from "./buildsApi";
-import type { Build, BuildFilters } from "./types";
+import type { Build, BuildFilters, BuildsPage } from "./types";
 
 export interface BuildsState {
   status: "idle" | "loading" | "ready" | "error";
@@ -37,6 +38,9 @@ export function useBuilds(projectId: string, filters: BuildFilters = {}): Builds
 
   const { branch, state, sha } = filters;
 
+  // A hot reload clears the cache and loads the page on screen again.
+  useEffect(() => onDataCacheCleared(() => setNonce((n) => n + 1)), []);
+
   // A new project, new filters or an explicit reload start again from the first page.
   useEffect(() => {
     setCursors([null]);
@@ -59,11 +63,23 @@ export function useBuilds(projectId: string, filters: BuildFilters = {}): Builds
       return;
     }
 
+    // Pages already loaded are served from the cache; only a new page, a filter change or a hot reload calls Percy.
+    const key = cacheKey("builds", projectId, cursor, branch, state, sha);
+    const cached = readCache<BuildsPage>(key);
+    if (cached) {
+      setBuilds(cached.builds);
+      setNextCursor(cached.nextCursor);
+      setError(null);
+      setStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     setStatus((s) => (s === "ready" ? s : "loading"));
     setError(null);
     fetchBuildsPage({ auth, projectId, cursor, filters: { branch, state, sha }, signal: controller.signal })
       .then((page) => {
+        writeCache(key, page);
         setBuilds(page.builds);
         setNextCursor(page.nextCursor);
         setStatus("ready");

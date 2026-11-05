@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
+import { cacheKey, onDataCacheCleared, readCache, writeCache } from "../dataCache";
 import { fetchSnapshotsPage } from "./snapshotsApi";
-import type { Snapshot, SnapshotFilters } from "./types";
+import type { Snapshot, SnapshotFilters, SnapshotsPage } from "./types";
 
 export interface SnapshotsState {
   status: "idle" | "loading" | "ready" | "error";
@@ -38,6 +39,9 @@ export function useSnapshots(buildId: string, filters: SnapshotFilters = {}): Sn
   // A stable string key keeps the effect from re-running on every new array identity.
   const reasonsKey = (filters.reviewStateReasons ?? []).join(",");
 
+  // A hot reload clears the cache and loads the page on screen again.
+  useEffect(() => onDataCacheCleared(() => setNonce((n) => n + 1)), []);
+
   // A new build, new filters or an explicit reload start again from the first page.
   useEffect(() => {
     setCursors([null]);
@@ -60,6 +64,17 @@ export function useSnapshots(buildId: string, filters: SnapshotFilters = {}): Sn
       return;
     }
 
+    // Pages already loaded are served from the cache; only a new page, a filter change or a hot reload calls Percy.
+    const key = cacheKey("snapshots", buildId, cursor, search, reasonsKey);
+    const cached = readCache<SnapshotsPage>(key);
+    if (cached) {
+      setSnapshots(cached.snapshots);
+      setNextCursor(cached.nextCursor);
+      setError(null);
+      setStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     setStatus((s) => (s === "ready" ? s : "loading"));
     setError(null);
@@ -71,6 +86,7 @@ export function useSnapshots(buildId: string, filters: SnapshotFilters = {}): Sn
       signal: controller.signal,
     })
       .then((p) => {
+        writeCache(key, p);
         setSnapshots(p.snapshots);
         setNextCursor(p.nextCursor);
         setStatus("ready");

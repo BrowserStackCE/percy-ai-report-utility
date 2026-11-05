@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
-import { MAX_ANALYTICS_PAGES, useAllBuilds } from "../api/builds/useAllBuilds";
+import { BUILD_COUNT_OPTIONS, DEFAULT_ANALYTICS_BUILDS, useAllBuilds } from "../api/builds/useAllBuilds";
 import {
   buildTrend,
   failureAnalysis,
@@ -24,7 +24,7 @@ import {
   type NoisySnapshot,
   type TestCaseRow,
 } from "../api/snapshots/analytics";
-import { SNAPSHOT_PAGES_PER_BUILD, SNAPSHOT_REPORT_BUILDS, useProjectSnapshots } from "../api/snapshots/useProjectSnapshots";
+import { DEFAULT_SNAPSHOT_REPORT_BUILDS, MAX_SNAPSHOTS_PER_BUILD, useProjectSnapshots } from "../api/snapshots/useProjectSnapshots";
 import type { Build } from "../api/builds/types";
 import { isRetryable } from "../api/errors";
 import { useProjects } from "../api/projects/useProjects";
@@ -32,6 +32,7 @@ import { useSelectedProject } from "../api/projects/SelectedProjectProvider";
 import { count, formatDuration, humanize } from "../lib/format";
 import { useDateFormat } from "../lib/dateFormat";
 import {
+  AccentStat,
   BarChart,
   Button,
   Card,
@@ -41,14 +42,44 @@ import {
   LoadingOverlay,
   PageContainer,
   PageHeader,
+  ProgressBar,
+  Select,
+  SectionBanner,
   StatusPill,
   TableSkeleton,
   Widget,
+  accentStyles,
   buttonClass,
+  cn,
+  type AccentTone,
   type Column,
   type Segment,
+  Bug,
+  Chat,
+  Clock,
+  Layers,
+  Pulse,
+  Spark,
+  Sparkles,
+  User,
 } from "../components/ui";
-import { StatCard } from "../components/ui/Card";
+
+/** Tone and icon for a KPI tile, picked from its label so related numbers share a colour across the page. */
+function kpiStyle(label: string): { tone: AccentTone; icon: React.ReactNode } {
+  const l = label.toLowerCase();
+  if (/fail|never|incomplete|warning|reject/.test(l)) return { tone: "danger", icon: <Bug size={16} /> };
+  if (/outstanding|waiting|unreview|slowest|partial|median|time/.test(l)) return { tone: "warn", icon: <Clock size={16} /> };
+  if (/approved|cleared|noise removed|reviewed/.test(l)) return { tone: "mint", icon: <Sparkles size={16} /> };
+  if (/comment|discuss/.test(l)) return { tone: "teal", icon: <Chat size={16} /> };
+  if (/ai|diff|change/.test(l)) return { tone: "brand", icon: <Spark size={16} /> };
+  if (/javascript|layout|selector|parallel|build|comparison|snapshot/.test(l)) return { tone: "info", icon: <Layers size={16} /> };
+  return { tone: "brand", icon: <Pulse size={16} /> };
+}
+
+function StatCard({ label, value, hint, info }: { label: string; value: React.ReactNode; hint: string; info?: string }) {
+  const { tone, icon } = kpiStyle(label);
+  return <AccentStat label={label} value={value} hint={hint} info={info} tone={tone} icon={icon} />;
+}
 
 const pct = (n: number | null) => (n === null ? "—" : `${n.toFixed(n >= 10 || n === 0 ? 0 : 1)}%`);
 
@@ -71,15 +102,33 @@ function ReviewPill({ state }: { state: string | null }) {
   return <StatusPill tone={(state && reviewTone[state]) || "neutral"}>{humanize(state)}</StatusPill>;
 }
 
-/** Page section wrapper: heading with the B-number, plus a description of what the numbers mean. */
-function Section({ id, title, info, children }: { id: string; title: string; info: string; children: React.ReactNode }) {
+/** Page section wrapper: coloured accent bar and icon beside the heading, plus a description of what the numbers mean. */
+function Section({
+  id,
+  title,
+  info,
+  tone = "brand",
+  icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  info: string;
+  tone?: AccentTone;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const a = accentStyles[tone];
   return (
-    <section aria-labelledby={`${id}-h`} className="space-y-3" data-testid={`section-${id}`}>
-      <div>
-        <h2 id={`${id}-h`} className="text-lg font-semibold text-ink-900">
-          {title}
-        </h2>
-        <p className="text-sm text-ink-500">{info}</p>
+    <section aria-labelledby={`${id}-h`} className="space-y-4 rounded-2xl border border-line bg-card/60 p-5 shadow-[var(--shadow-card)]" data-testid={`section-${id}`}>
+      <div className="flex items-start gap-3">
+        <span className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-on-brand)]", a.chip)}>{icon ?? <Pulse size={18} />}</span>
+        <div className="min-w-0">
+          <h2 id={`${id}-h`} className="text-lg font-semibold text-ink-900">
+            {title}
+          </h2>
+          <p className="text-sm text-ink-500">{info}</p>
+        </div>
       </div>
       {children}
     </section>
@@ -89,7 +138,10 @@ function Section({ id, title, info, children }: { id: string; title: string; inf
 export default function Analytics() {
   const { projectId } = useSelectedProject();
   const { projects } = useProjects();
-  const { status, builds, error, truncated, pagesLoaded, reload } = useAllBuilds(projectId);
+  // How many builds each report includes (max 10). Changing it, or a hot reload, is the only time Percy is called again.
+  const [buildCount, setBuildCount] = useState<string>(String(DEFAULT_ANALYTICS_BUILDS));
+  const [snapshotBuildCount, setSnapshotBuildCount] = useState<string>(String(DEFAULT_SNAPSHOT_REPORT_BUILDS));
+  const { status, builds, error, truncated, pagesLoaded, reload } = useAllBuilds(projectId, Number(buildCount));
   const { formatDateTime, zone } = useDateFormat();
 
   const trend = useMemo(() => buildTrend(builds), [builds]);
@@ -100,7 +152,7 @@ export default function Analytics() {
   const reviewers = useMemo(() => reviewerWorkload(builds), [builds]);
 
   // Snapshot reports (C1–C8): the newest finished builds, with their snapshots and comparisons.
-  const snaps = useProjectSnapshots(projectId);
+  const snaps = useProjectSnapshots(projectId, Number(snapshotBuildCount));
   const allSnapshots = useMemo(() => snaps.builds.flatMap((b) => b.snapshots), [snaps.builds]);
   const noisy = useMemo(() => noisiestSnapshots(snaps.builds), [snaps.builds]);
   const distribution = useMemo(() => diffDistribution(allSnapshots), [allSnapshots]);
@@ -243,16 +295,41 @@ export default function Analytics() {
     <PageContainer>
       <PageHeader
         title="Build analytics"
-        description={`Trends across ${project ? project.name : "the selected project"} builds from the last 30 days.`}
+        description={`Trends across the newest ${buildCount} ${project ? project.name : "project"} builds from the last 30 days.`}
         actions={
-          <div className="flex gap-2">
-            <Button onClick={reload}>Refresh</Button>
+          <div className="flex items-center gap-2">
+            <div className="w-40">
+              <Select
+                value={buildCount}
+                options={BUILD_COUNT_OPTIONS.map((n) => ({ value: String(n), label: `Last ${n} builds` }))}
+                onChange={setBuildCount}
+                ariaLabel="Number of builds to include"
+              />
+            </div>
             <Link to="/" className={buttonClass("secondary")}>
               Back to reports
             </Link>
           </div>
         }
       />
+
+      {builds.length > 0 && !error && (
+        <div className="relative overflow-hidden rounded-2xl border border-brand-300/50 bg-gradient-to-r from-brand-50 via-info-50 to-teal-50 p-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Builds analysed", value: count(trend.totalBuilds), tone: "text-brand-700" },
+              { label: "Builds with diffs", value: pct(trend.diffRatePct), tone: "text-info-700" },
+              { label: "Failure rate", value: pct(failures.failureRatePct), tone: "text-danger-600" },
+              { label: "Median time to approve", value: formatDuration(sla.medianSeconds), tone: "text-mint-700" },
+            ].map((k) => (
+              <div key={k.label} className="rounded-xl bg-card/70 px-4 py-3 backdrop-blur">
+                <p className="text-xs font-medium uppercase tracking-wider text-ink-500">{k.label}</p>
+                <p className={`mt-1 text-2xl font-semibold tabular-nums ${k.tone}`}>{k.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error ? (
         <Card className="p-5">
@@ -279,20 +356,19 @@ export default function Analytics() {
       ) : (
         <div className="space-y-8">
           {status === "loading" && (
-            <p className="text-sm text-ink-500" role="status">
-              Loading more builds… ({pagesLoaded} page{pagesLoaded === 1 ? "" : "s"} so far)
-            </p>
+            <ProgressBar value={builds.length} max={Number(buildCount)} label={`Loading builds… ${builds.length} of up to ${buildCount} (${pagesLoaded} page${pagesLoaded === 1 ? "" : "s"})`} />
           )}
           {truncated && (
             <p className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-700" role="note">
-              Showing the newest {builds.length} builds (first {MAX_ANALYTICS_PAGES} pages). Older builds in the 30-day window were not
-              included.
+              Showing the newest {builds.length} builds. Pick a higher build count (max 10) to include more.
             </p>
           )}
 
           {/* B1 */}
           <Section
             id="b1"
+            tone="brand"
+            icon={<Pulse size={18} />}
             title="Build trend"
             info="Builds per day, split by review outcome. The diff rate is the share of finished builds that had at least one visual difference."
           >
@@ -330,6 +406,8 @@ export default function Analytics() {
           {/* B2 */}
           <Section
             id="b2"
+            tone="warn"
+            icon={<Clock size={18} />}
             title="Review turnaround"
             info="How long builds wait between Percy finishing them and someone approving them, and which builds are still waiting."
           >
@@ -351,6 +429,8 @@ export default function Analytics() {
           {/* B4 */}
           <Section
             id="b4"
+            tone="danger"
+            icon={<Bug size={18} />}
             title="Failure analysis"
             info="Why builds and snapshots failed, and builds that CI never finalised."
           >
@@ -379,6 +459,8 @@ export default function Analytics() {
           {/* B5 */}
           <Section
             id="b5"
+            tone="info"
+            icon={<Layers size={18} />}
             title="Pull request quality"
             info="For each pull request: how many builds it needed, how many had diffs, and the review state of its latest build."
           >
@@ -388,6 +470,8 @@ export default function Analytics() {
           {/* B6 */}
           <Section
             id="b6"
+            tone="teal"
+            icon={<Layers size={18} />}
             title="Parallel and partial builds"
             info="Partial builds do not cover the whole suite. Parallel runs share a nonce; a run with fewer builds than shards may be incomplete."
           >
@@ -412,6 +496,8 @@ export default function Analytics() {
           {/* B8 */}
           <Section
             id="b8"
+            tone="mint"
+            icon={<User size={18} />}
             title="Reviewer workload"
             info="Approvals per person. Builds where Percy did not return the approver are grouped as Unknown."
           >
@@ -419,12 +505,22 @@ export default function Analytics() {
           </Section>
 
           {/* Snapshot reports (C1–C8) */}
-          <div className="border-t border-line pt-8">
-            <h2 className="text-xl font-semibold text-ink-900">Snapshot analytics</h2>
-            <p className="text-sm text-ink-500">
-              Based on the {SNAPSHOT_REPORT_BUILDS} newest finished builds, up to {SNAPSHOT_PAGES_PER_BUILD * 30} snapshots each.
-            </p>
-          </div>
+          <SectionBanner
+            tone="brand"
+            icon={<Sparkles size={20} />}
+            title="Snapshot analytics"
+            description={`Based on the ${snapshotBuildCount} newest finished builds, up to ${MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} snapshots each.`}
+            action={
+              <div className="w-40">
+                <Select
+                  value={snapshotBuildCount}
+                  options={BUILD_COUNT_OPTIONS.map((n) => ({ value: String(n), label: `Last ${n} builds` }))}
+                  onChange={setSnapshotBuildCount}
+                  ariaLabel="Number of builds for snapshot analytics"
+                />
+              </div>
+            }
+          />
 
           {snaps.error ? (
             <Card className="p-5">
@@ -439,27 +535,38 @@ export default function Analytics() {
               )}
             </Card>
           ) : snaps.status === "loading" && snaps.builds.length === 0 ? (
-            <LoadingOverlay label="Loading snapshots">
-              <TableSkeleton rows={4} cols={5} />
-            </LoadingOverlay>
+            <div className="space-y-4">
+              <ProgressBar
+                value={snaps.snapshotsLoaded}
+                max={snaps.snapshotsExpected}
+                label={snaps.snapshotsExpected > 0 ? `Loading snapshots… ${snaps.snapshotsLoaded.toLocaleString()} of ${snaps.snapshotsExpected.toLocaleString()}` : "Finding builds…"}
+              />
+              <LoadingOverlay label="Loading snapshots">
+                <TableSkeleton rows={4} cols={5} />
+              </LoadingOverlay>
+            </div>
           ) : allSnapshots.length === 0 ? (
             <EmptyState title="No snapshots to analyse" description="There are no finished builds with snapshots for this project yet." />
           ) : (
             <div className="space-y-8">
               {snaps.status === "loading" && (
-                <p className="text-sm text-ink-500" role="status">
-                  Loading snapshots… ({snaps.buildsLoaded} of {snaps.buildsTotal} builds)
-                </p>
+                <ProgressBar
+                  value={snaps.snapshotsLoaded}
+                  max={snaps.snapshotsExpected}
+                  label={`Loading snapshots… ${snaps.snapshotsLoaded.toLocaleString()} of ${snaps.snapshotsExpected.toLocaleString()} (${snaps.buildsLoaded} of ${snaps.buildsTotal} builds)`}
+                />
               )}
               {snaps.truncated && (
                 <p className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-700" role="note">
-                  Some builds have more than {SNAPSHOT_PAGES_PER_BUILD * 30} snapshots, so only the first {SNAPSHOT_PAGES_PER_BUILD * 30} of each were included.
+                  Some builds have more than {MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} snapshots, so only the first {MAX_SNAPSHOTS_PER_BUILD.toLocaleString()} of each were included.
                 </p>
               )}
 
               {/* C1 */}
               <Section
                 id="c1"
+            tone="warn"
+            icon={<Spark size={18} />}
                 title="Noisiest snapshots"
                 info="Snapshots that show a diff in many builds. A high diff rate usually means flaky content (dates, ads, animations) rather than a real change."
               >
@@ -469,6 +576,8 @@ export default function Analytics() {
               {/* C2 */}
               <Section
                 id="c2"
+            tone="brand"
+            icon={<Sparkles size={18} />}
                 title="Diff size and AI noise removal"
                 info="How much of the page changed. Percy AI filters out noise, so the AI figure is usually smaller than the raw one."
               >
@@ -515,6 +624,8 @@ export default function Analytics() {
               {/* C3 */}
               <Section
                 id="c3"
+            tone="brand"
+            icon={<Sparkles size={18} />}
                 title="Percy AI effectiveness"
                 info="How much review work Percy AI took off your team, and how often it failed."
               >
@@ -536,6 +647,8 @@ export default function Analytics() {
               {/* C4 */}
               <Section
                 id="c4"
+            tone="mint"
+            icon={<Layers size={18} />}
                 title="Review state and reasons"
                 info="Where each snapshot stands, and why. Auto-approved snapshots matched an auto-approve branch; human-approved ones were reviewed by a person."
               >
@@ -561,6 +674,8 @@ export default function Analytics() {
               {/* C5 */}
               <Section
                 id="c5"
+            tone="teal"
+            icon={<Chat size={18} />}
                 title="Open comments"
                 info="Snapshots with unresolved review comments, most comments first."
               >
@@ -587,6 +702,8 @@ export default function Analytics() {
               {/* C6 */}
               <Section
                 id="c6"
+            tone="info"
+            icon={<Layers size={18} />}
                 title="Rendering configuration"
                 info="How snapshots are rendered, and which ones Percy warned about."
               >
@@ -613,6 +730,8 @@ export default function Analytics() {
               {/* C7 */}
               <Section
                 id="c7"
+            tone="danger"
+            icon={<Bug size={18} />}
                 title="Tests producing the most diffs"
                 info="Snapshots grouped by the test that created them, with a link to the BrowserStack session when Percy provides one."
               >
@@ -622,6 +741,8 @@ export default function Analytics() {
               {/* C8 */}
               <Section
                 id="c8"
+            tone="info"
+            icon={<Pulse size={18} />}
                 title="Diff rate by width and browser"
                 info="Which viewport width or browser shows the most diffs, to find the breakpoint or browser that regresses most."
               >

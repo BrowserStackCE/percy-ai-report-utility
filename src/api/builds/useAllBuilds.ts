@@ -1,28 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider";
+import { cacheKey, onDataCacheCleared, readCache, writeCache } from "../dataCache";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
 import { fetchBuildsPage } from "./buildsApi";
+import { BUILDS_PAGE_SIZE } from "./mapper";
 import type { Build } from "./types";
 
-/** Safety cap: 10 pages x 30 builds. Keeps the analytics page well inside Percy's read rate limit. */
-export const MAX_ANALYTICS_PAGES = 10;
+/** Most builds an analytics report may include. */
+export const MAX_ANALYTICS_BUILDS = 10;
+/** Build counts offered in the filter. */
+export const BUILD_COUNT_OPTIONS = [3, 5, 10] as const;
+export const DEFAULT_ANALYTICS_BUILDS = 10;
+
+/** Pages needed to cover the build limit (30 builds per page), used when more than one is required. */
+const pagesFor = (limit: number) => Math.max(1, Math.ceil(limit / BUILDS_PAGE_SIZE));
 
 export interface AllBuildsState {
   status: "idle" | "loading" | "ready" | "error";
   builds: Build[];
   error: ApiError | null;
-  /** True when the page cap was hit and older builds in the 30-day window were not loaded. */
+  /** True when more builds exist in the 30-day window than the chosen limit. */
   truncated: boolean;
   pagesLoaded: number;
   reload: () => void;
 }
 
+interface CachedBuilds {
+  builds: Build[];
+  truncated: boolean;
+  pagesLoaded: number;
+}
+
 /**
- * Every build of a project in Percy's 30-day window, loaded page by page (cursor = last build id).
- * Used by the Analytics page, which aggregates across builds instead of listing one page.
+ * The newest builds of a project in Percy's 30-day window, up to `limit` (max 10), loaded page by page
+ * (cursor = last build id). Used by the Analytics page, which aggregates across builds.
+ * A completed load is cached per project and limit; a hot reload clears it.
  */
-export function useAllBuilds(projectId: string): AllBuildsState {
+export function useAllBuilds(projectId: string, limit: number = DEFAULT_ANALYTICS_BUILDS): AllBuildsState {
+  const cap = Math.min(Math.max(1, limit), MAX_ANALYTICS_BUILDS);
   const { credentials } = useAuth();
   const [builds, setBuilds] = useState<Build[]>([]);
   const [status, setStatus] = useState<AllBuildsState["status"]>("idle");
@@ -32,6 +48,7 @@ export function useAllBuilds(projectId: string): AllBuildsState {
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  useEffect(() => onDataCacheCleared(() => setNonce((n) => n + 1)), []);
 
   useEffect(() => {
     if (!projectId) {
@@ -47,6 +64,17 @@ export function useAllBuilds(projectId: string): AllBuildsState {
       return;
     }
 
+    const key = cacheKey("analytics-builds", projectId, cap);
+    const cached = readCache<CachedBuilds>(key);
+    if (cached) {
+      setBuilds(cached.builds);
+      setTruncated(cached.truncated);
+      setPagesLoaded(cached.pagesLoaded);
+      setError(null);
+      setStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     setStatus("loading");
     setError(null);
@@ -57,18 +85,24 @@ export function useAllBuilds(projectId: string): AllBuildsState {
     (async () => {
       const all: Build[] = [];
       let cursor: number | null = null;
-      for (let page = 1; page <= MAX_ANALYTICS_PAGES; page += 1) {
+      let more = false;
+      let pages = 0;
+      for (let page = 1; page <= pagesFor(cap); page += 1) {
         const res = await fetchBuildsPage({ auth, projectId, cursor, signal: controller.signal });
+        if (controller.signal.aborted) return;
         all.push(...res.builds);
-        setBuilds([...all]);
+        pages = page;
+        more = res.nextCursor !== null;
+        setBuilds(all.slice(0, cap));
         setPagesLoaded(page);
-        if (res.nextCursor === null) {
-          setStatus("ready");
-          return;
-        }
+        if (res.nextCursor === null || all.length >= cap) break;
         cursor = res.nextCursor;
       }
-      setTruncated(true);
+      const picked = all.slice(0, cap);
+      const cut = more || all.length > cap;
+      setBuilds(picked);
+      setTruncated(cut);
+      writeCache<CachedBuilds>(key, { builds: picked, truncated: cut, pagesLoaded: pages });
       setStatus("ready");
     })().catch((err: unknown) => {
       if (controller.signal.aborted) return;
@@ -77,7 +111,7 @@ export function useAllBuilds(projectId: string): AllBuildsState {
     });
 
     return () => controller.abort();
-  }, [credentials, projectId, nonce]);
+  }, [credentials, projectId, cap, nonce]);
 
   return { status, builds, error, truncated, pagesLoaded, reload };
 }

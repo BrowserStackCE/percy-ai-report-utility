@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError, isApiError } from "../errors";
 import { authFromCredentials } from "../http";
+import { cacheKey, onDataCacheCleared, readCache, writeCache } from "../dataCache";
 import { fetchBuild } from "./buildsApi";
 import type { Build } from "./types";
 
@@ -21,6 +22,7 @@ export function useBuild(buildId: string): BuildState {
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  useEffect(() => onDataCacheCleared(() => setNonce((n) => n + 1)), []);
 
   useEffect(() => {
     // No build in the URL (for example the breadcrumb on other pages): nothing to load.
@@ -37,11 +39,21 @@ export function useBuild(buildId: string): BuildState {
       setError(new ApiError("not_authenticated", "You are not signed in.", { hint: "Sign in to see this build." }));
       return;
     }
+    const key = cacheKey("build", buildId);
+    const cached = readCache<Build>(key);
+    if (cached) {
+      setBuild(cached);
+      setError(null);
+      setStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     setStatus("loading");
     setError(null);
     fetchBuild(buildId, { auth, signal: controller.signal })
       .then((b) => {
+        writeCache(key, b);
         setBuild(b);
         setStatus("ready");
       })

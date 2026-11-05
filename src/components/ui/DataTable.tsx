@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { InfoTip } from "./InfoTip";
 import { cn } from "./cn";
 
@@ -17,10 +17,12 @@ interface DataTableProps<T> {
   rows: T[];
   rowKey: (row: T) => string;
   empty?: ReactNode;
+  /** Optional full-width content rendered in its own row under a data row. Return null for no detail row. */
+  renderDetail?: (row: T) => ReactNode;
 }
 
 /** Bordered table with an uppercase header row, matching the builds list. */
-export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowKey, empty, renderDetail }: DataTableProps<T>) {
   return (
     <div className="max-w-full overflow-x-auto rounded-[var(--radius-card)] border border-line bg-card shadow-[var(--shadow-card)]">
       <table className="w-full min-w-[760px] text-left text-sm md:min-w-0">
@@ -52,23 +54,35 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: DataTableProps<T>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
-          {rows.map((row) => (
-            <tr key={rowKey(row)} className="align-top transition-colors hover:bg-page/60">
-              {columns.map((c) => (
-                <td
-                  key={c.key}
-                  className={cn(
-                    "border-line px-4 py-4.5 first:pl-6 last:pr-6",
-                    c.align === "right" && "text-right",
-                    c.align === "center" && "text-center",
-                    c.className,
-                  )}
-                >
-                  {c.render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const detail = renderDetail?.(row);
+            return (
+              <Fragment key={rowKey(row)}>
+                <tr className="align-top transition-colors hover:bg-page/60">
+                  {columns.map((c) => (
+                    <td
+                      key={c.key}
+                      className={cn(
+                        "border-line px-4 py-4.5 first:pl-6 last:pr-6",
+                        c.align === "right" && "text-right",
+                        c.align === "center" && "text-center",
+                        c.className,
+                      )}
+                    >
+                      {c.render(row)}
+                    </td>
+                  ))}
+                </tr>
+                {detail && (
+                  <tr>
+                    <td colSpan={columns.length} className="p-0">
+                      {detail}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
           {rows.length === 0 && (
             <tr>
               <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-ink-400">
