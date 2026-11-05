@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { isRetryable } from "../../api/errors";
 import { useSnapshots } from "../../api/snapshots/useSnapshots";
@@ -8,9 +8,12 @@ import {
   Button,
   Card,
   Chip,
+  ChevronDown,
   DataTable,
-  Drawer,
   External,
+  Eye,
+  EyeOff,
+  Sparkles,
   LoadingOverlay,
   Pagination,
   Search,
@@ -107,46 +110,112 @@ function aiOf(s: Snapshot): SnapshotAi | null {
   return best;
 }
 
-/** Full text of what Percy AI reported for one snapshot, shown in the right-hand drawer. */
-function AiDetails({ s }: { s: Snapshot }) {
-  const ai = aiOf(s);
-  if (!ai) return <p className="text-sm text-ink-500">Percy AI did not run for this snapshot.</p>;
-  const kept = ai.findings.filter((f) => !f.ignored);
-  const ignored = ai.findings.filter((f) => f.ignored);
-  const Finding = ({ f }: { f: SnapshotAi["findings"][number] }) => (
-    <li className="rounded-lg border border-line p-3">
+/** Colour for a finding's change type, so the kind of change reads at a glance. */
+function changeTone(type: string | null): { chip: string; bar: string } {
+  const t = (type ?? "").toLowerCase();
+  if (/bug|break|missing|overlap|broken|error|regress/.test(t)) return { chip: "bg-danger-50 text-danger-600 border-danger-600/30", bar: "bg-danger-600" };
+  if (/layout|position|size|shift|spacing|align/.test(t)) return { chip: "bg-warn-50 text-warn-700 border-warn-700/30", bar: "bg-warn-500" };
+  if (/color|colour|style|font|text|content|image/.test(t)) return { chip: "bg-info-50 text-info-700 border-info-500/30", bar: "bg-info-500" };
+  return { chip: "bg-brand-50 text-brand-700 border-brand-300", bar: "bg-brand-500" };
+}
+
+function FindingCard({ f, noise }: { f: SnapshotAi["findings"][number]; noise?: boolean }) {
+  const tone = noise ? { chip: "bg-chip text-ink-500 border-line-strong", bar: "bg-ink-300" } : changeTone(f.changeType);
+  return (
+    <li className="relative overflow-hidden rounded-xl border border-line bg-card p-4 pl-5 shadow-[var(--shadow-card)]">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${tone.bar}`} />
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-ink-900">{f.title ?? "Untitled change"}</p>
-        {f.changeType && <Chip>{f.changeType}</Chip>}
+        <p className="min-w-0 text-sm font-semibold text-ink-900">{f.title ?? "Untitled change"}</p>
+        {f.changeType && (
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tone.chip}`}>{humanize(f.changeType)}</span>
+        )}
       </div>
-      {f.description && <p className="mt-1.5 whitespace-pre-wrap text-sm text-ink-700">{f.description}</p>}
-      {f.reason && <p className="mt-1.5 whitespace-pre-wrap text-xs text-ink-500">{f.reason}</p>}
+      {f.description && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink-700">{f.description}</p>}
+      {f.reason && (
+        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-surface px-3 py-2 text-xs leading-5 text-ink-500">
+          <span className="font-semibold text-ink-700">Why: </span>
+          {f.reason}
+        </p>
+      )}
     </li>
   );
+}
+
+/** Full-width Percy AI panel shown directly under a snapshot's row: summary figures, then every change as a coloured card. */
+function AiPanel({ s, onClose }: { s: Snapshot; onClose: () => void }) {
+  const ai = aiOf(s);
+  const c = primaryComparison(s);
+  const kept = ai?.findings.filter((f) => !f.ignored) ?? [];
+  const ignored = ai?.findings.filter((f) => f.ignored) ?? [];
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-ink-700">
-        <span className="font-semibold tabular-nums">{count(ai.visualDiffs)}</span> visual diffs kept by Percy AI
-        {ai.processingStatus ? ` · ${humanize(ai.processingStatus)}` : ""}
-      </p>
-      {ai.findings.length === 0 && ai.summary && <p className="whitespace-pre-wrap text-sm text-ink-700">{ai.summary}</p>}
-      {kept.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Changes to review</h3>
-          <ul className="space-y-2">{kept.map((f, i) => <Finding key={i} f={f} />)}</ul>
-        </section>
-      )}
-      {ignored.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Ignored as noise</h3>
-          <ul className="space-y-2">{ignored.map((f, i) => <Finding key={i} f={f} />)}</ul>
-        </section>
+    <div className="fade-in border-y border-brand-300/50 bg-gradient-to-br from-brand-50 via-card to-info-50 px-6 py-5" data-testid="ai-panel">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-[var(--color-on-brand)]">
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold text-ink-900">Percy AI review</h3>
+            <p className="text-xs text-ink-500">{s.name}</p>
+          </div>
+        </div>
+        <Button onClick={onClose} aria-label={`Close Percy AI for ${s.name}`}>
+          Close
+        </Button>
+      </div>
+
+      {!ai ? (
+        <p className="mt-4 text-sm text-ink-500">Percy AI did not run for this snapshot.</p>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-brand-300/60 bg-brand-50 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700">Visual diffs kept</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-brand-700">{count(ai.visualDiffs)}</p>
+            </div>
+            <div className="rounded-xl border border-warn-700/30 bg-warn-50 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-warn-700">Changes to review</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-warn-700">{count(kept.length)}</p>
+            </div>
+            <div className="rounded-xl border border-mint-300 bg-mint-50 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-mint-700">Ignored as noise</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-mint-700">{count(ignored.length)}</p>
+            </div>
+            <div className="rounded-xl border border-info-500/30 bg-info-50 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-info-700">Diff after AI</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-info-700">{c ? formatRatio(c.aiDiffRatio ?? c.diffRatio) : "—"}</p>
+              {c && c.aiDiffRatio !== null && c.diffRatio !== null && <p className="text-xs text-info-700/80">was {formatRatio(c.diffRatio)} raw</p>}
+            </div>
+          </div>
+          {ai.processingStatus && <p className="mt-3 text-xs text-ink-500">Status: {humanize(ai.processingStatus)}</p>}
+          {ai.findings.length === 0 && ai.summary && <p className="mt-4 whitespace-pre-wrap text-sm text-ink-700">{ai.summary}</p>}
+          {kept.length > 0 && (
+            <section className="mt-5">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Changes to review</h4>
+              <ul className="grid gap-3 lg:grid-cols-2">
+                {kept.map((f, i) => (
+                  <FindingCard key={i} f={f} />
+                ))}
+              </ul>
+            </section>
+          )}
+          {ignored.length > 0 && (
+            <section className="mt-5">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">Ignored as noise</h4>
+              <ul className="grid gap-3 lg:grid-cols-2">
+                {ignored.map((f, i) => (
+                  <FindingCard key={i} f={f} noise />
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-const makeColumns = (openAi: (s: Snapshot) => void): Column<Snapshot>[] => [
+const makeColumns = (isOpen: (s: Snapshot) => boolean, toggleAi: (s: Snapshot) => void): Column<Snapshot>[] => [
   { key: "snapshot", header: "Snapshot", className: "max-w-sm", render: (s) => <SnapshotRow s={s} /> },
   {
     key: "review",
@@ -182,15 +251,22 @@ const makeColumns = (openAi: (s: Snapshot) => void): Column<Snapshot>[] => [
     render: (s) => {
       const ai = aiOf(s);
       if (!ai) return <span className="text-sm text-ink-400">Not run</span>;
+      const open = isOpen(s);
       return (
         <button
           type="button"
-          onClick={() => openAi(s)}
-          aria-label={`Open Percy AI details for ${s.name}`}
-          className="group inline-flex items-center gap-1.5 rounded-md text-sm text-ink-900 hover:text-brand-600"
+          onClick={() => toggleAi(s)}
+          aria-expanded={open}
+          aria-label={`${open ? "Hide" : "Show"} Percy AI details for ${s.name}`}
+          className={`group inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+            open
+              ? "border-brand-500 bg-brand-500 text-[var(--color-on-brand)]"
+              : "border-brand-300 bg-brand-50 text-brand-700 hover:border-brand-500"
+          }`}
         >
+          <Sparkles size={14} />
           <span className="tabular-nums">{count(ai.visualDiffs)} visual diffs</span>
-          <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">›</span>
+          <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       );
     },
@@ -226,8 +302,20 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
   );
   const { status, snapshots, error, page, hasNext, hasPrev, loadingPage, next, prev, reload } = useSnapshots(buildId, filters);
   const filtered = applied !== "" || reason !== "all";
-  const [aiFor, setAiFor] = useState<Snapshot | null>(null);
-  const columns = useMemo(() => makeColumns(setAiFor), []);
+  // Percy AI panels are closed until a row's arrow is clicked; the toggle opens or closes all of them at once.
+  const [openAi, setOpenAi] = useState<ReadonlySet<string>>(new Set());
+  const hasAi = snapshots.some((s) => aiOf(s) !== null);
+  const aiIds = useMemo(() => snapshots.filter((s) => aiOf(s) !== null).map((s) => s.id), [snapshots]);
+  const allOpen = aiIds.length > 0 && aiIds.every((id) => openAi.has(id));
+  const toggleOne = useCallback((s: Snapshot) => {
+    setOpenAi((prev) => {
+      const next = new Set(prev);
+      if (next.has(s.id)) next.delete(s.id);
+      else next.add(s.id);
+      return next;
+    });
+  }, []);
+  const columns = useMemo(() => makeColumns((s) => openAi.has(s.id), toggleOne), [openAi, toggleOne]);
 
   return (
     <section aria-labelledby="snapshots-heading" className="space-y-4">
@@ -235,12 +323,28 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
         <h2 id="snapshots-heading" className="text-lg font-semibold text-ink-900">
           Snapshots
         </h2>
-        {percyUrl && (
-          <a href={percyUrl} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
-            <External size={16} />
-            Review in Percy
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {hasAi && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={allOpen}
+              onClick={() => setOpenAi(allOpen ? new Set() : new Set(aiIds))}
+              className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors ${
+                allOpen ? "border-brand-500 bg-brand-50 text-brand-700" : "border-line-strong bg-card text-ink-900 hover:bg-surface"
+              }`}
+            >
+              {allOpen ? <Eye size={16} /> : <EyeOff size={16} />}
+              {allOpen ? "Hide all Percy AI" : "Show all Percy AI"}
+            </button>
+          )}
+          {percyUrl && (
+            <a href={percyUrl} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
+              <External size={16} />
+              Review in Percy
+            </a>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -333,6 +437,24 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
                           <div><span className="block text-xs text-ink-500">Diff</span><span className="text-sm font-semibold text-ink-900">{c ? formatRatio(c.aiDiffRatio ?? c.diffRatio) : "—"}</span></div>
                           <div><span className="block text-xs text-ink-500">Comments</span><span className="text-sm font-semibold text-ink-900">{count(s.openComments)}</span></div>
                         </div>
+                        {aiOf(s) && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleOne(s)}
+                              aria-expanded={openAi.has(s.id)}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700"
+                            >
+                              <Sparkles size={14} />
+                              {openAi.has(s.id) ? "Hide Percy AI" : "Show Percy AI"}
+                            </button>
+                          </div>
+                        )}
+                        {openAi.has(s.id) && (
+                          <div className="-mx-3 -mb-3 mt-3 overflow-hidden rounded-b-xl">
+                            <AiPanel s={s} onClose={() => toggleOne(s)} />
+                          </div>
+                        )}
                       </Card>
                     );
                   })}
@@ -344,6 +466,7 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
                     rows={snapshots}
                     rowKey={(s) => s.id}
                     empty={filtered ? "No snapshots match these filters." : "This build has no snapshots."}
+                    renderDetail={(s) => (openAi.has(s.id) ? <AiPanel s={s} onClose={() => toggleOne(s)} /> : null)}
                   />
                 </div>
               </div>
@@ -360,9 +483,6 @@ export function SnapshotsSection({ buildId, percyUrl }: { buildId: string; percy
           )}
         </>
       )}
-      <Drawer open={aiFor !== null} onClose={() => setAiFor(null)} title={aiFor ? `Percy AI · ${aiFor.name}` : "Percy AI"} widthClassName="w-[32rem]">
-        {aiFor && <AiDetails s={aiFor} />}
-      </Drawer>
     </section>
   );
 }
